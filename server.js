@@ -126,6 +126,18 @@ app.get('/manifest.json', (req, res) => {
   res.json(manifest);
 });
 
+// ---------- Test Resolve Endpoint ----------
+app.get('/test-resolve', async (req, res) => {
+  const url = req.query.url || 'https://s1.hdup400.com/embed-dhee0d7m819i.html';
+  try {
+    const { resolveEmbed } = require('./resolver');
+    const result = await resolveEmbed(url);
+    res.json({ result });
+  } catch (err) {
+    res.json({ error: err.message, stack: err.stack });
+  }
+});
+
 // ---------- Catalog Endpoint ----------
 app.get(/^\/catalog\/([^/]+)\/([^/]+?)(?:\.json|\/(.*))?$/, async (req, res) => {
   try {
