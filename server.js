@@ -4,7 +4,7 @@ const axios = require('axios');
 const { manifest, getCatalog, getMeta, getStreamsFor } = require('./scraper');
 
 const app = express();
-const PORT = process.env.PORT || 7000;
+const PORT = process.env.PORT || 7860;
 
 // ---------- CORS & Private Network Middleware ----------
 app.use((req, res, next) => {
