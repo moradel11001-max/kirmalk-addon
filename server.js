@@ -323,12 +323,16 @@ function getLocalIp() {
   return 'localhost';
 }
 
-// ---------- Start Server ----------
-app.listen(PORT, '0.0.0.0', () => {
-  const localIp = getLocalIp();
-  console.log('\n======================================================');
-  console.log('✅ Kirmalk Stremio Addon is running!');
-  console.log(`📡 Local URL:   http://localhost:${PORT}/manifest.json`);
-  console.log(`📺 TV / LAN URL: http://${localIp}:${PORT}/manifest.json`);
-  console.log('======================================================\n');
-});
+// ---------- Export app & Start Server ----------
+module.exports = app;
+
+if (require.main === module) {
+  app.listen(PORT, '0.0.0.0', () => {
+    const localIp = getLocalIp();
+    console.log('\n======================================================');
+    console.log('✅ Kirmalk Stremio Addon is running!');
+    console.log(`📡 Local URL:   http://localhost:${PORT}/manifest.json`);
+    console.log(`📺 TV / LAN URL: http://${localIp}:${PORT}/manifest.json`);
+    console.log('======================================================\n');
+  });
+}
