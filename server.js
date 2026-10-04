@@ -126,30 +126,6 @@ app.get('/manifest.json', (req, res) => {
   res.json(manifest);
 });
 
-// ---------- Diagnostic Endpoint ----------
-app.get('/diag-endpoints', async (req, res) => {
-  const tests = [
-    { name: 'movies', url: 'https://kirmalk.com/movies.php' },
-    { name: 'search_en', url: 'https://kirmalk.com/search.php?keywords=love' },
-    { name: 'search_ar', url: 'https://kirmalk.com/search.php?keywords=%D9%85%D8%B3%D9%84%D8%B3%D9%84' },
-    { name: 'cat_turk_noref', url: 'https://kirmalk.com/category.php?cat=turk14', noRef: true },
-    { name: 'cat_turk_ref', url: 'https://kirmalk.com/category.php?cat=turk14' }
-  ];
-
-  const results = {};
-  for (const t of tests) {
-    try {
-      const headers = { 'User-Agent': 'okhttp/4.9.3' };
-      if (!t.noRef) headers['Referer'] = 'https://kirmalk.com/';
-      const resp = await axios.get(t.url, { headers, timeout: 5000 });
-      results[t.name] = { status: resp.status, len: resp.data.length };
-    } catch (err) {
-      results[t.name] = { error: err.message, status: err.response?.status };
-    }
-  }
-  res.json(results);
-});
-
 // ---------- Catalog Endpoint ----------
 app.get(['/catalog/:type/:id.json', '/catalog/:type/:id/:extra.json'], async (req, res) => {
   try {
