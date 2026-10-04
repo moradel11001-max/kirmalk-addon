@@ -596,9 +596,10 @@ async function getStreamsFor(baseId, season, episode, hostUrl = '') {
       if (resolved && resolved.length > 0) {
         return resolved.map(r => {
           const referer = r.referer || s.embed;
-          // Notice: Must end with .m3u8 so Android TV ExoPlayer chooses HlsMediaSource!
+          const isHls = r.url.includes('.m3u8') || (r.title && r.title.includes('HLS'));
+          const endpoint = isHls ? '/proxy/stream.m3u8' : '/proxy/video.mp4';
           const streamUrl = hostUrl
-            ? `${hostUrl}/proxy/stream.m3u8?url=${encodeURIComponent(r.url)}&referer=${encodeURIComponent(referer)}`
+            ? `${hostUrl}${endpoint}?url=${encodeURIComponent(r.url)}&referer=${encodeURIComponent(referer)}`
             : r.url;
 
           return {
@@ -620,16 +621,7 @@ async function getStreamsFor(baseId, season, episode, hostUrl = '') {
   const streamLists = await Promise.all(streamPromises);
   const playable = streamLists.flat();
 
-  if (playable.length > 0) {
-    return playable;
-  }
-
-  // If no embed could be resolved to a direct stream, fallback to external browser link
-  return servers.map(s => ({
-    name: `Kirmalk`,
-    title: `[${s.label || `سيرفر ${s.server}`}] مشاهدة في المشغل الخارجي`,
-    externalUrl: s.embed
-  }));
+  return playable;
 }
 
 module.exports = {

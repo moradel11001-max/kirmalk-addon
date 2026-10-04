@@ -175,10 +175,17 @@ app.get('/meta/:type/:id.json', async (req, res) => {
 });
 
 // ---------- Streams Endpoint ----------
+const streamMemoryCache = {};
+
 app.get('/stream/:type/:id.json', async (req, res) => {
   try {
     const { id } = req.params;
     const hostUrl = getHostUrl(req);
+    const cacheKey = `${id}_${hostUrl}`;
+
+    if (streamMemoryCache[cacheKey] && streamMemoryCache[cacheKey].expires > Date.now()) {
+      return res.json({ streams: streamMemoryCache[cacheKey].data });
+    }
 
     const parts = id.split(':');
     const baseId = parts[0];
@@ -186,7 +193,16 @@ app.get('/stream/:type/:id.json', async (req, res) => {
     const episode = parts[2];
 
     const streams = await getStreamsFor(id, season, episode, hostUrl);
-    res.json({ streams: streams || [] });
+    const result = streams || [];
+
+    if (result.length > 0) {
+      streamMemoryCache[cacheKey] = {
+        data: result,
+        expires: Date.now() + 600000 // 10 minutes cache
+      };
+    }
+
+    res.json({ streams: result });
   } catch (e) {
     console.error('Stream route error:', e.message);
     res.json({ streams: [] });
@@ -221,12 +237,13 @@ app.get('/proxy/image.jpg', async (req, res) => {
   }
 });
 
-// ---------- HLS / Stream Proxy Endpoints ----------
+// ---------- HLS & MP4 Stream Proxy Endpoints ----------
 // Notice: /proxy/stream.m3u8 informs Android TV ExoPlayer to use HlsMediaSource!
 app.get([
   '/proxy/stream.m3u8',
   '/proxy/sub.m3u8',
   '/proxy/segment.ts',
+  '/proxy/video.mp4',
   '/proxy/hls'
 ], async (req, res) => {
   const targetUrl = req.query.url;
@@ -240,7 +257,7 @@ app.get([
     const hostUrl = getHostUrl(req);
 
     const headers = {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+      'User-Agent': 'okhttp/4.9.3',
       'Referer': referer
     };
 
@@ -266,19 +283,39 @@ app.get([
     }
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Headers', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+    res.setHeader('Access-Control-Allow-Private-Network', 'true');
 
+    // Handle MP4 Progressive Playback
     const contentType = (response.headers['content-type'] || '').toLowerCase();
-    const isM3U8 = targetUrl.includes('.m3u8') || contentType.includes('mpegurl');
+    if (req.path.includes('.mp4') || targetUrl.includes('.mp4') || contentType.includes('video/mp4')) {
+      res.setHeader('Content-Type', 'video/mp4');
+      return res.send(response.data);
+    }
 
-    if (isM3U8 && response.status === 200) {
-      const text = Buffer.from(response.data).toString('utf8');
+    // Check if body is an M3U8 Playlist
+    let isPlaylist = false;
+    let text = '';
+    if (response.status === 200 && response.data && response.data.length > 0) {
+      const headerSnippet = response.data.slice(0, 30).toString('utf8');
+      if (headerSnippet.includes('#EXTM3U') || targetUrl.includes('.m3u8') || contentType.includes('mpegurl') || req.path.includes('.m3u8')) {
+        isPlaylist = true;
+        text = Buffer.from(response.data).toString('utf8');
+      }
+    }
+
+    if (isPlaylist) {
       const lines = text.split('\n');
+      let isNextSub = false;
 
       const rewritten = lines.map(line => {
         const trimmed = line.trim();
         if (!trimmed) return line;
 
         if (trimmed.startsWith('#')) {
+          if (trimmed.startsWith('#EXT-X-STREAM-INF:')) {
+            isNextSub = true;
+          }
           if (trimmed.includes('URI="')) {
             return line.replace(/URI="([^"]+)"/, (m, uri) => {
               const fullKeyUrl = uri.startsWith('http') ? uri : new URL(uri, targetUrl).toString();
@@ -293,8 +330,8 @@ app.get([
           fullChunkUrl = new URL(trimmed, targetUrl).toString();
         }
 
-        // Sub-playlist ends with .m3u8, segment chunks end with .ts
-        const isSub = fullChunkUrl.includes('.m3u8');
+        const isSub = isNextSub || fullChunkUrl.includes('.m3u8');
+        isNextSub = false;
         const proxyPath = isSub ? '/proxy/sub.m3u8' : '/proxy/segment.ts';
 
         return `${hostUrl}${proxyPath}?url=${encodeURIComponent(fullChunkUrl)}&referer=${encodeURIComponent(referer)}`;

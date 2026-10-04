@@ -6,7 +6,7 @@ const http = axios.create({
     'User-Agent': 'okhttp/4.9.3',
     'Referer': 'https://kirmalk.com/'
   },
-  timeout: 5000,
+  timeout: 3500,
   maxRedirects: 5
 });
 
@@ -82,7 +82,10 @@ function extractMediaUrls(html) {
   for (const re of patterns) {
     let match;
     while ((match = re.exec(source)) !== null) {
-      const url = match[1].replace(/\\\//g, '/').replace(/&amp;/g, '&');
+      let url = match[1].replace(/\\\//g, '/').replace(/&amp;/g, '&');
+      if (url.includes('&quot;')) {
+        url = url.split('&quot;')[0];
+      }
       if (/\.(?:m3u8|mp4|mkv)/i.test(url)) {
         urls.add(url);
       }
@@ -95,69 +98,69 @@ function extractMediaUrls(html) {
 // ---------- OK.ru resolver ----------
 async function resolveOkRu(url) {
   try {
-    const videoIdMatch = url.match(/(?:videoembed|video)\/(\d+)/);
-    const videoId = videoIdMatch ? videoIdMatch[1] : null;
-
     const { data: html } = await http.get(url, {
       headers: { 'Referer': 'https://kirmalk.com/' }
     });
 
-    const streams = [];
-
-    const optionsMatch = html.match(/data-options\s*=\s*["'](\{[\s\S]+?\})["']/i) ||
-                         html.match(/data-movie-options\s*=\s*["'](\{[\s\S]+?\})["']/i);
+    const $ = cheerio.load(html);
+    const dataOptions = $('[data-options]').attr('data-options') || $('[data-movie-options]').attr('data-movie-options');
 
     let metadata = null;
-    if (optionsMatch) {
+    if (dataOptions) {
       try {
-        const decoded = optionsMatch[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&');
-        metadata = JSON.parse(decoded);
+        const parsed = JSON.parse(dataOptions);
+        metadata = typeof parsed.flashvars?.metadata === 'string'
+          ? JSON.parse(parsed.flashvars.metadata)
+          : (parsed.flashvars?.metadata || parsed.metadata);
       } catch (_) {}
     }
 
-    if (!metadata && videoId) {
-      try {
-        const metaRes = await http.post(
-          'https://www.ok.ru/dk?cmd=videoPlayerMetadata',
-          `mid=${videoId}`,
-          {
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded',
-              'Referer': url
+    if (!metadata) {
+      const videoIdMatch = url.match(/(?:videoembed|video)\/(\d+)/);
+      const videoId = videoIdMatch ? videoIdMatch[1] : null;
+      if (videoId) {
+        try {
+          const metaRes = await http.post(
+            'https://www.ok.ru/dk?cmd=videoPlayerMetadata',
+            `mid=${videoId}`,
+            {
+              headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Referer': url
+              }
             }
+          );
+          if (metaRes.data && (metaRes.data.videos || metaRes.data.hlsManifestUrl)) {
+            metadata = metaRes.data;
           }
-        );
-        if (metaRes.data && (metaRes.data.videos || metaRes.data.hlsManifestUrl)) {
-          metadata = metaRes.data;
-        }
-      } catch (_) {}
+        } catch (_) {}
+      }
     }
+
+    const streams = [];
 
     if (metadata) {
       if (metadata.hlsManifestUrl) {
         streams.push({
-          title: 'OK.ru (HLS)',
+          title: 'HLS (m3u8)',
           url: metadata.hlsManifestUrl,
           referer: 'https://www.ok.ru/'
         });
       }
       if (Array.isArray(metadata.videos)) {
-        for (const v of metadata.videos) {
-          if (v.url) {
-            streams.push({
-              title: `OK.ru (${(v.name || 'MP4').toUpperCase()})`,
-              url: v.url,
-              referer: 'https://www.ok.ru/'
-            });
-          }
-        }
-      }
-    }
+        const qualityOrder = { 'full': 1, 'hd': 2, 'sd': 3, 'low': 4 };
+        const allowedQualities = ['full', 'hd', 'sd'];
+        const filtered = metadata.videos.filter(v => v.url && allowedQualities.includes(v.name));
+        filtered.sort((a, b) => (qualityOrder[a.name] || 99) - (qualityOrder[b.name] || 99));
 
-    if (streams.length === 0) {
-      const genericUrls = extractMediaUrls(html);
-      for (const u of genericUrls) {
-        streams.push({ title: 'OK.ru Direct', url: u, referer: 'https://www.ok.ru/' });
+        for (const v of filtered) {
+          const label = v.name === 'full' ? '1080p' : (v.name === 'hd' ? '720p' : '480p');
+          streams.push({
+            title: `MP4 (${label})`,
+            url: v.url,
+            referer: 'https://www.ok.ru/'
+          });
+        }
       }
     }
 
