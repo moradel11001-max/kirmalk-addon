@@ -147,7 +147,7 @@ app.get(['/catalog/:type/:id.json', '/catalog/:type/:id/:extra.json'], async (re
     res.json(result);
   } catch (e) {
     console.error('Catalog route error:', e.message);
-    res.json({ metas: [] });
+    res.json({ metas: [], error: e.message, stack: e.stack });
   }
 });
 
