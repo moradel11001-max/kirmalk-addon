@@ -16,7 +16,11 @@ async function testAll() {
     { name: 'Discover Syrian', path: '/catalog/series/kirmalk_series/genre=%D9%85%D8%B3%D9%84%D8%B3%D9%84%D8%A7%D8%AA%20%D8%B4%D8%A7%D9%85%D9%8A%D8%A9.json' },
     { name: 'Discover Gulf', path: '/catalog/series/kirmalk_series/genre=%D9%85%D8%B3%D9%84%D8%B3%D9%84%D8%A7%D8%AA%20%D8%AE%D9%84%D9%8A%D8%AC%D9%8A%D8%A9.json' },
     { name: 'Discover Ramadan', path: '/catalog/series/kirmalk_series/genre=%D9%85%D8%B3%D9%84%D8%B3%D9%84%D8%A7%D8%AA%20%D8%B1%D9%85%D8%B6%D8%A7%D9%86.json' },
-    { name: 'Movie Stream', path: '/stream/movie/km_m_1993c7d98.json' }
+    { name: 'Movie Stream', path: '/stream/movie/km_m_1993c7d98.json' },
+    { name: 'Series Meta (Kalabsh)', path: '/meta/series/km_s_bc1341b69.json' },
+    { name: 'Series Stream (Kalabsh Ep 1)', path: '/stream/series/km_s_bc1341b69:1:1.json' },
+    { name: 'Series Stream (Kalabsh Ep 2)', path: '/stream/series/km_s_bc1341b69:1:2.json' },
+    { name: 'Series Stream (Zil Al Helm Ep 1)', path: '/stream/series/km_s_1cc62c4b8:1:1.json' }
   ];
 
   console.log('\n--- TESTING PRODUCTION VERCEL ENDPOINTS ---\n');
@@ -28,6 +32,8 @@ async function testAll() {
         result = `${res.data.metas.length} items`;
       } else if (res.data.streams) {
         result = `${res.data.streams.length} stream links`;
+      } else if (res.data.meta) {
+        result = `${res.data.meta.name} (${res.data.meta.videos?.length || 0} eps)`;
       } else if (res.data.catalogs) {
         result = 'valid manifest';
       }
