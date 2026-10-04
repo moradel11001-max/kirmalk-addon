@@ -10,7 +10,7 @@ const CACHE_FILE = path.join(__dirname, 'cache.json');
 // ---------- HTTP Client ----------
 const http = axios.create({
   headers: {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+    'User-Agent': 'okhttp/4.9.3',
     'Accept-Language': 'ar,en;q=0.8',
     'Referer': BASE
   },

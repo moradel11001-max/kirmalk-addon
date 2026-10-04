@@ -126,38 +126,6 @@ app.get('/manifest.json', (req, res) => {
   res.json(manifest);
 });
 
-// ---------- Diagnostic Endpoint ----------
-app.get('/test-diag', async (req, res) => {
-  const results = {};
-
-  // Test 1: kirmalk.com with mobile app user-agent
-  try {
-    const r1 = await axios.get('https://kirmalk.com/movies.php', {
-      headers: {
-        'User-Agent': 'okhttp/4.9.3',
-        'Accept': '*/*'
-      },
-      timeout: 6000
-    });
-    results.kirmalk_mobile = { status: r1.status, length: r1.data.length, title: r1.data.slice(0, 100) };
-  } catch (err) {
-    results.kirmalk_mobile = { error: err.message, status: err.response?.status };
-  }
-
-  // Test 2: krmalk.tv
-  try {
-    const r2 = await axios.get('https://krmalk.tv/movies.php', {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
-      timeout: 6000
-    });
-    results.krmalk_tv = { status: r2.status, length: r2.data.length, title: r2.data.slice(0, 100) };
-  } catch (err) {
-    results.krmalk_tv = { error: err.message, status: err.response?.status };
-  }
-
-  res.json(results);
-});
-
 // ---------- Catalog Endpoint ----------
 app.get(['/catalog/:type/:id.json', '/catalog/:type/:id/:extra.json'], async (req, res) => {
   try {
@@ -227,7 +195,7 @@ app.get('/proxy/image.jpg', async (req, res) => {
       method: 'get',
       url: imageUrl,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+        'User-Agent': 'okhttp/4.9.3',
         'Referer': 'https://kirmalk.com/'
       },
       responseType: 'arraybuffer',
