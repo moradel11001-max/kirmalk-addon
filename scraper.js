@@ -232,7 +232,7 @@ async function getCatalog(type, extra = {}, hostUrl = '') {
   const cacheKey = `catalog_${type}_${search || 'all'}_p${page}`;
 
   let metas = getCache(cacheKey);
-  if (!metas) {
+  if (!metas || metas.length === 0) {
     if (search) {
       metas = await scrapeSearch(search, page);
       if (type === 'movie') {
@@ -245,7 +245,9 @@ async function getCatalog(type, extra = {}, hostUrl = '') {
     } else {
       metas = await scrapeSeries(page);
     }
-    setCache(cacheKey, metas, 1800000);
+    if (metas && metas.length > 0) {
+      setCache(cacheKey, metas, 1800000);
+    }
   }
 
   const formattedMetas = (metas || []).map(m => ({
