@@ -157,7 +157,7 @@ app.get(/^\/catalog\/([^/]+)\/([^/]+?)(?:\.json|\/(.*))?$/, async (req, res) => 
     res.json(result);
   } catch (e) {
     console.error('Catalog route error:', e.message);
-    res.json({ metas: [] });
+    res.json({ metas: [], error: e.message, stack: e.stack });
   }
 });
 
