@@ -32,6 +32,11 @@ const manifest = {
       id: "kirmalk_movies",
       name: "كرمالك - أفلام",
       extra: [
+        {
+          name: "genre",
+          options: ["الكل", "أفلام عربي", "مسرحيات"],
+          isRequired: false
+        },
         { name: "search", isRequired: false },
         { name: "skip", isRequired: false }
       ]
@@ -41,6 +46,11 @@ const manifest = {
       id: "kirmalk_series",
       name: "كرمالك - مسلسلات",
       extra: [
+        {
+          name: "genre",
+          options: ["الكل", "مسلسلات تركية", "مسلسلات مصرية", "مسلسلات شامية", "مسلسلات خليجية", "مسلسلات رمضان"],
+          isRequired: false
+        },
         { name: "search", isRequired: false },
         { name: "skip", isRequired: false }
       ]
@@ -195,20 +205,31 @@ async function scrapeSearch(query, page = 1) {
   return parseCards($, 'movie');
 }
 
+async function scrapeCategory(cat, page = 1, defaultType = 'series') {
+  const url = page > 1
+    ? `${BASE}/category.php?cat=${cat}&page=${page}`
+    : `${BASE}/category.php?cat=${cat}`;
+  const { data } = await http.get(url);
+  const $ = cheerio.load(data);
+  return parseCards($, defaultType);
+}
+
 // ---------- High-Level getCatalog for Stremio ----------
 async function getCatalog(type, extra = {}, hostUrl = '') {
   let skip = 0;
   let search = null;
+  let genre = null;
 
   if (typeof extra === 'number' || typeof extra === 'string') {
     skip = parseInt(extra, 10) || 0;
   } else if (typeof extra === 'object' && extra !== null) {
     skip = parseInt(extra.skip, 10) || 0;
     search = extra.search || null;
+    genre = extra.genre || null;
   }
 
   const page = Math.floor(skip / 20) + 1;
-  const cacheKey = `catalog_${type}_${search || 'all'}_p${page}`;
+  const cacheKey = `catalog_${type}_${search || genre || 'all'}_p${page}`;
 
   let metas = getCache(cacheKey);
   if (!metas || metas.length === 0) {
@@ -220,9 +241,26 @@ async function getCatalog(type, extra = {}, hostUrl = '') {
         metas = metas.filter(m => m.type === 'series');
       }
     } else if (type === 'movie') {
-      metas = await scrapeMovies(page);
+      if (genre === 'مسرحيات') {
+        metas = await scrapeSearch('مسرحية', page);
+      } else {
+        metas = await scrapeMovies(page);
+      }
     } else {
-      metas = await scrapeSeries(page);
+      // Series
+      if (genre === 'مسلسلات تركية') {
+        metas = await scrapeCategory('turk14', page, 'series');
+      } else if (genre === 'مسلسلات مصرية') {
+        metas = await scrapeCategory('serieseg4', page, 'series');
+      } else if (genre === 'مسلسلات شامية') {
+        metas = await scrapeCategory('seriessy5', page, 'series');
+      } else if (genre === 'مسلسلات خليجية') {
+        metas = await scrapeCategory('series5l', page, 'series');
+      } else if (genre === 'مسلسلات رمضان') {
+        metas = await scrapeCategory('rmadan27', page, 'series');
+      } else {
+        metas = await scrapeSeries(page);
+      }
     }
     if (metas && metas.length > 0) {
       setCache(cacheKey, metas, 1800000);

@@ -127,27 +127,37 @@ app.get('/manifest.json', (req, res) => {
 });
 
 // ---------- Catalog Endpoint ----------
-app.get(['/catalog/:type/:id.json', '/catalog/:type/:id/:extra.json'], async (req, res) => {
+app.get(/^\/catalog\/([^/]+)\/([^/]+?)(?:\.json|\/(.*))?$/, async (req, res) => {
   try {
-    const { type, id, extra: extraParam } = req.params;
-    const hostUrl = getHostUrl(req);
+    const type = req.params[0];
+    const id = req.params[1].replace(/\.json$/, '');
+    let rest = req.params[2] || '';
+    rest = rest.replace(/\.json$/, '');
 
     const extra = {};
-    if (extraParam) {
-      const parsed = new URLSearchParams(extraParam);
-      for (const [k, v] of parsed.entries()) {
-        extra[k] = v;
+    if (rest) {
+      const parts = rest.split(/[/&]/);
+      for (const part of parts) {
+        const [k, v] = part.split('=');
+        if (k && v !== undefined) {
+          try {
+            extra[decodeURIComponent(k)] = decodeURIComponent(v);
+          } catch (_) {
+            extra[k] = v;
+          }
+        }
       }
     }
     if (req.query) {
       Object.assign(extra, req.query);
     }
 
+    const hostUrl = getHostUrl(req);
     const result = await getCatalog(type, extra, hostUrl);
     res.json(result);
   } catch (e) {
     console.error('Catalog route error:', e.message);
-    res.json({ metas: [], error: e.message, stack: e.stack });
+    res.json({ metas: [] });
   }
 });
 
