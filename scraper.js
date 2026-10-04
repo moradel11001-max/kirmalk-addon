@@ -59,6 +59,80 @@ const manifest = {
   idPrefixes: ["km_"]
 };
 
+// ---------- Static Fallback Catalog (Bundled) ----------
+let initialData = {};
+try {
+  const initFile = path.join(__dirname, 'initial_data.json');
+  if (fs.existsSync(initFile)) {
+    initialData = JSON.parse(fs.readFileSync(initFile, 'utf8'));
+  }
+} catch (e) {
+  console.error('Failed to load initial_data.json:', e);
+}
+
+function getFallbackMetas(type, genre, search) {
+  if (search) {
+    const q = search.toLowerCase().trim();
+    const all = [
+      ...(initialData.movies || []),
+      ...(initialData.series || []),
+      ...(initialData.turkish || []),
+      ...(initialData.egyptian || []),
+      ...(initialData.syrian || []),
+      ...(initialData.gulf || []),
+      ...(initialData.ramadan || []),
+      ...(initialData.plays || [])
+    ];
+    const seen = new Set();
+    const results = [];
+    for (const item of all) {
+      if (!seen.has(item.id) && item.name.toLowerCase().includes(q)) {
+        if (!type || item.type === type) {
+          seen.add(item.id);
+          results.push(item);
+        }
+      }
+    }
+    return results;
+  }
+
+  if (type === 'movie') {
+    if (genre === 'مسرحيات') {
+      return initialData.plays || [];
+    }
+    return initialData.movies || [];
+  }
+
+  // type === 'series'
+  if (genre === 'مسلسلات تركية') {
+    return initialData.turkish || [];
+  } else if (genre === 'مسلسلات مصرية') {
+    return initialData.egyptian || [];
+  } else if (genre === 'مسلسلات شامية') {
+    return initialData.syrian || [];
+  } else if (genre === 'مسلسلات خليجية') {
+    return initialData.gulf || [];
+  } else if (genre === 'مسلسلات رمضان') {
+    return initialData.ramadan || [];
+  }
+
+  // General series: combine series + turkish + egyptian
+  const combined = [
+    ...(initialData.series || []),
+    ...(initialData.turkish || []),
+    ...(initialData.egyptian || [])
+  ];
+  const seen = new Set();
+  const list = [];
+  for (const item of combined) {
+    if (!seen.has(item.id)) {
+      seen.add(item.id);
+      list.push(item);
+    }
+  }
+  return list;
+}
+
 // ---------- Persistent Cache ----------
 let cache = {};
 try {
@@ -228,42 +302,60 @@ async function getCatalog(type, extra = {}, hostUrl = '') {
     genre = extra.genre || null;
   }
 
+  if (genre === 'الكل') {
+    genre = null;
+  }
+
   const page = Math.floor(skip / 20) + 1;
   const cacheKey = `catalog_${type}_${search || genre || 'all'}_p${page}`;
 
   let metas = getCache(cacheKey);
   if (!metas || metas.length === 0) {
-    if (search) {
-      metas = await scrapeSearch(search, page);
-      if (type === 'movie') {
-        metas = metas.filter(m => m.type === 'movie');
-      } else if (type === 'series') {
-        metas = metas.filter(m => m.type === 'series');
-      }
-    } else if (type === 'movie') {
-      if (genre === 'مسرحيات') {
-        metas = await scrapeSearch('مسرحية', page);
+    try {
+      if (search) {
+        metas = await scrapeSearch(search, page);
+        if (type === 'movie') {
+          metas = metas.filter(m => m.type === 'movie');
+        } else if (type === 'series') {
+          metas = metas.filter(m => m.type === 'series');
+        }
+      } else if (type === 'movie') {
+        if (genre === 'مسرحيات') {
+          metas = await scrapeSearch('مسرحية', page);
+        } else {
+          metas = await scrapeMovies(page);
+        }
       } else {
-        metas = await scrapeMovies(page);
+        // Series
+        if (genre === 'مسلسلات تركية') {
+          metas = await scrapeCategory('turk14', page, 'series');
+        } else if (genre === 'مسلسلات مصرية') {
+          metas = await scrapeCategory('serieseg4', page, 'series');
+        } else if (genre === 'مسلسلات شامية') {
+          metas = await scrapeCategory('seriessy5', page, 'series');
+        } else if (genre === 'مسلسلات خليجية') {
+          metas = await scrapeCategory('series5l', page, 'series');
+        } else if (genre === 'مسلسلات رمضان') {
+          metas = await scrapeCategory('rmadan27', page, 'series');
+        } else {
+          metas = await scrapeSeries(page);
+        }
       }
-    } else {
-      // Series
-      if (genre === 'مسلسلات تركية') {
-        metas = await scrapeCategory('turk14', page, 'series');
-      } else if (genre === 'مسلسلات مصرية') {
-        metas = await scrapeCategory('serieseg4', page, 'series');
-      } else if (genre === 'مسلسلات شامية') {
-        metas = await scrapeCategory('seriessy5', page, 'series');
-      } else if (genre === 'مسلسلات خليجية') {
-        metas = await scrapeCategory('series5l', page, 'series');
-      } else if (genre === 'مسلسلات رمضان') {
-        metas = await scrapeCategory('rmadan27', page, 'series');
-      } else {
-        metas = await scrapeSeries(page);
+
+      if (metas && metas.length > 0) {
+        setCache(cacheKey, metas, 1800000);
       }
+    } catch (err) {
+      console.warn(`Live scrape failed for ${type} (${genre || 'all'}): ${err.message}. Using fallback catalog.`);
     }
-    if (metas && metas.length > 0) {
-      setCache(cacheKey, metas, 1800000);
+  }
+
+  // Fallback if live scrape was empty or failed
+  if (!metas || metas.length === 0) {
+    const fallbackList = getFallbackMetas(type, genre, search);
+    metas = fallbackList.slice(skip, skip + 50);
+    if (metas.length === 0 && skip === 0) {
+      metas = fallbackList.slice(0, 50);
     }
   }
 
@@ -282,87 +374,119 @@ async function getMeta(type, id, hostUrl = '') {
 
   if (!meta) {
     const cleanVid = cleanId(id);
-    const { data } = await http.get(`${BASE}/watch.php?vid=${cleanVid}`);
-    const $ = cheerio.load(data);
+    try {
+      const { data } = await http.get(`${BASE}/watch.php?vid=${cleanVid}`);
+      const $ = cheerio.load(data);
 
-    const title = $('h1.modern-video-title').text().trim() ||
-                  $('meta[property="og:title"]').attr('content') ||
-                  cleanVid;
+      const title = $('h1.modern-video-title').text().trim() ||
+                    $('meta[property="og:title"]').attr('content') ||
+                    cleanVid;
 
-    const rawPoster = $('meta[property="og:image"]').attr('content') ||
-                      $('link[itemprop="thumbnailUrl"]').attr('href') ||
-                      $('.thumbnail-image').attr('src');
-    const poster = normalizeUrl(rawPoster);
+      const rawPoster = $('meta[property="og:image"]').attr('content') ||
+                        $('link[itemprop="thumbnailUrl"]').attr('href') ||
+                        $('.thumbnail-image').attr('src');
+      const poster = normalizeUrl(rawPoster);
 
-    const rawBackground = $('.modern-player-wrapper').css('background-image') || poster;
-    let background = poster;
-    const bgMatch = (rawBackground || '').match(/url\(["']?([^"']+)["']?\)/);
-    if (bgMatch) background = normalizeUrl(bgMatch[1]);
+      const rawBackground = $('.modern-player-wrapper').css('background-image') || poster;
+      let background = poster;
+      const bgMatch = (rawBackground || '').match(/url\(["']?([^"']+)["']?\)/);
+      if (bgMatch) background = normalizeUrl(bgMatch[1]);
 
-    const description = $('.video-description p').map((_, el) => $(el).text().trim()).get().join('\n') ||
-                        $('meta[property="og:description"]').attr('content') ||
-                        '';
+      const description = $('.video-description p').map((_, el) => $(el).text().trim()).get().join('\n') ||
+                          $('meta[property="og:description"]').attr('content') ||
+                          '';
 
-    const genres = [];
-    $('.details-line span a, .watch-information-section a[href*="category.php"]').each((_, el) => {
-      const text = $(el).text().trim();
-      if (text && !genres.includes(text)) genres.push(text);
-    });
-
-    let seriesName = title;
-    $('.details-line').each((_, el) => {
-      const text = $(el).text();
-      if (text.includes('المسلسل:')) {
-        const parts = text.split('المسلسل:');
-        if (parts[1]) seriesName = parts[1].trim();
-      }
-    });
-
-    meta = {
-      id,
-      type,
-      name: type === 'series' ? seriesName : title,
-      poster,
-      background,
-      description,
-      genres
-    };
-
-    if (type === 'series' || $('.episodes-grid-classic').length > 0) {
-      meta.type = 'series';
-      const videos = [];
-
-      $('.episodes-grid-classic a.classic-episode-item').each((idx, el) => {
-        const epHref = $(el).attr('href');
-        const epVid = extractVid(epHref);
-        if (!epVid) return;
-
-        const numText = $(el).find('.episode-number-large').text().trim();
-        const epNum = parseInt(numText, 10) || (idx + 1);
-
-        videos.push({
-          id: `${id}:1:${epNum}:${epVid}`,
-          title: `الحلقة ${epNum}`,
-          season: 1,
-          episode: epNum
-        });
+      const genres = [];
+      $('.details-line span a, .watch-information-section a[href*="category.php"]').each((_, el) => {
+        const text = $(el).text().trim();
+        if (text && !genres.includes(text)) genres.push(text);
       });
 
-      if (videos.length === 0) {
-        const epNum = extractEpisode(title) || 1;
-        videos.push({
+      let seriesName = title;
+      $('.details-line').each((_, el) => {
+        const text = $(el).text();
+        if (text.includes('المسلسل:')) {
+          const parts = text.split('المسلسل:');
+          if (parts[1]) seriesName = parts[1].trim();
+        }
+      });
+
+      meta = {
+        id,
+        type,
+        name: type === 'series' ? seriesName : title,
+        poster,
+        background,
+        description,
+        genres
+      };
+
+      if (type === 'series' || $('.episodes-grid-classic').length > 0) {
+        meta.type = 'series';
+        const videos = [];
+
+        $('.episodes-grid-classic a.classic-episode-item').each((idx, el) => {
+          const epHref = $(el).attr('href');
+          const epVid = extractVid(epHref);
+          if (!epVid) return;
+
+          const numText = $(el).find('.episode-number-large').text().trim();
+          const epNum = parseInt(numText, 10) || (idx + 1);
+
+          videos.push({
+            id: `${id}:1:${epNum}:${epVid}`,
+            title: `الحلقة ${epNum}`,
+            season: 1,
+            episode: epNum
+          });
+        });
+
+        if (videos.length === 0) {
+          const epNum = extractEpisode(title) || 1;
+          videos.push({
+            id: `${id}:1:${epNum}:${cleanVid}`,
+            title: `الحلقة ${epNum}`,
+            season: 1,
+            episode: epNum
+          });
+        }
+
+        videos.sort((a, b) => a.episode - b.episode);
+        meta.videos = videos;
+      }
+
+      setCache(cacheKey, meta, 7200000);
+    } catch (err) {
+      console.warn(`getMeta failed for ${id}: ${err.message}. Using fallback meta.`);
+      const all = [
+        ...(initialData.movies || []),
+        ...(initialData.series || []),
+        ...(initialData.turkish || []),
+        ...(initialData.egyptian || []),
+        ...(initialData.syrian || []),
+        ...(initialData.gulf || []),
+        ...(initialData.ramadan || []),
+        ...(initialData.plays || [])
+      ];
+      const found = all.find(item => item.id === id);
+      meta = {
+        id,
+        type: found ? found.type : type,
+        name: found ? found.name : 'فيديو',
+        poster: found ? found.poster : null,
+        background: found ? found.poster : null,
+        description: found ? found.name : ''
+      };
+      if (meta.type === 'series') {
+        const epNum = extractEpisode(meta.name) || 1;
+        meta.videos = [{
           id: `${id}:1:${epNum}:${cleanVid}`,
           title: `الحلقة ${epNum}`,
           season: 1,
           episode: epNum
-        });
+        }];
       }
-
-      videos.sort((a, b) => a.episode - b.episode);
-      meta.videos = videos;
     }
-
-    setCache(cacheKey, meta, 7200000);
   }
 
   return {
@@ -504,6 +628,7 @@ module.exports = {
   scrapeMovies,
   scrapeSeries,
   scrapeSearch,
+  scrapeCategory,
   scrapeWatchServers,
   extractVid,
   extractEpisode,

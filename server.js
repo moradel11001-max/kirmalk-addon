@@ -126,37 +126,6 @@ app.get('/manifest.json', (req, res) => {
   res.json(manifest);
 });
 
-// ---------- Debug CF Endpoint ----------
-app.get('/debug-cf', async (req, res) => {
-  const tests = [
-    { name: 'movies_http', url: 'https://kirmalk.com/movies.php', useHttp: true },
-    { name: 'turk_http', url: 'https://kirmalk.com/category.php?cat=turk14', useHttp: true },
-    { name: 'turk_plain_slash', url: 'https://kirmalk.com/category.php?cat=turk14', headers: { 'User-Agent': 'okhttp/4.9.3', 'Referer': 'https://kirmalk.com/' } },
-    { name: 'turk_no_ref', url: 'https://kirmalk.com/category.php?cat=turk14', headers: { 'User-Agent': 'okhttp/4.9.3' } },
-    { name: 'search_ar_http', url: `https://kirmalk.com/search.php?keywords=${encodeURIComponent('مسلسل')}`, useHttp: true },
-    { name: 'search_ar_plain', url: `https://kirmalk.com/search.php?keywords=${encodeURIComponent('مسلسل')}`, headers: { 'User-Agent': 'okhttp/4.9.3', 'Referer': 'https://kirmalk.com/' } },
-  ];
-
-  const results = {};
-  for (const t of tests) {
-    try {
-      const resp = t.useHttp
-        ? await require('./scraper').http.get(t.url)
-        : await axios.get(t.url, { headers: t.headers, timeout: 7000 });
-      results[t.name] = { status: resp.status, len: resp.data.length };
-    } catch (err) {
-      results[t.name] = {
-        error: err.message,
-        status: err.response?.status,
-        cfRay: err.response?.headers?.['cf-ray'],
-        server: err.response?.headers?.['server'],
-        bodySnippet: typeof err.response?.data === 'string' ? err.response?.data.slice(0, 300) : null
-      };
-    }
-  }
-  res.json(results);
-});
-
 // ---------- Catalog Endpoint ----------
 app.get(/^\/catalog\/([^/]+)\/([^/]+?)(?:\.json|\/(.*))?$/, async (req, res) => {
   try {
@@ -188,7 +157,7 @@ app.get(/^\/catalog\/([^/]+)\/([^/]+?)(?:\.json|\/(.*))?$/, async (req, res) => 
     res.json(result);
   } catch (e) {
     console.error('Catalog route error:', e.message);
-    res.json({ metas: [], error: e.message, stack: e.stack });
+    res.json({ metas: [] });
   }
 });
 
