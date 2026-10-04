@@ -178,31 +178,10 @@ async function scrapeMovies(page = 1) {
 }
 
 async function scrapeSeries(page = 1) {
-  // Page 1 gets latest series from homepage, otherwise browse series categories
-  if (page === 1) {
-    try {
-      const { data } = await http.get(`${BASE}/`);
-      const $ = cheerio.load(data);
-      const results = parseCards($, 'series');
-      if (results.length > 0) return results;
-    } catch (_) {}
-  }
-
-  const categoryUrl = page > 1 
-    ? `${BASE}/category.php?cat=turk14&page=${page}` 
-    : `${BASE}/category.php?cat=turk14`;
-
-  try {
-    const { data } = await http.get(categoryUrl);
-    const $ = cheerio.load(data);
-    const results = parseCards($, 'series');
-    if (results.length > 0) return results;
-  } catch (_) {}
-
-  const fallbackUrl = page > 1 
-    ? `${BASE}/category.php?cat=serieseg4&page=${page}` 
-    : `${BASE}/category.php?cat=serieseg4`;
-  const { data } = await http.get(fallbackUrl);
+  const url = page > 1
+    ? `${BASE}/search.php?keywords=${encodeURIComponent('مسلسل')}&page=${page}`
+    : `${BASE}/search.php?keywords=${encodeURIComponent('مسلسل')}`;
+  const { data } = await http.get(url);
   const $ = cheerio.load(data);
   return parseCards($, 'series');
 }
