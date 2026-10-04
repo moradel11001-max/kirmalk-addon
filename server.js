@@ -126,6 +126,37 @@ app.get('/manifest.json', (req, res) => {
   res.json(manifest);
 });
 
+// ---------- Debug Stream Endpoint ----------
+app.get('/debug-stream/:vid', async (req, res) => {
+  const vid = req.params.vid;
+  const result = {};
+  try {
+    const { http, BASE, scrapeWatchServers, getStreamsFor } = require('./scraper');
+    try {
+      const viewRes = await http.get(`${BASE}/view.php?vid=${vid}`);
+      result.viewStatus = viewRes.status;
+      result.viewLen = viewRes.data.length;
+    } catch (ve) {
+      result.viewError = {
+        msg: ve.message,
+        status: ve.response?.status,
+        cfRay: ve.response?.headers?.['cf-ray'],
+        server: ve.response?.headers?.['server'],
+        snippet: typeof ve.response?.data === 'string' ? ve.response.data.slice(0, 300) : null
+      };
+    }
+
+    const { servers } = await scrapeWatchServers(vid);
+    result.servers = servers;
+    const streamLists = await getStreamsFor(`km_m_${vid}`, null, null, getHostUrl(req));
+    result.streams = streamLists;
+  } catch (e) {
+    result.error = e.message;
+    result.stack = e.stack;
+  }
+  res.json(result);
+});
+
 // ---------- Catalog Endpoint ----------
 app.get(/^\/catalog\/([^/]+)\/([^/]+?)(?:\.json|\/(.*))?$/, async (req, res) => {
   try {
