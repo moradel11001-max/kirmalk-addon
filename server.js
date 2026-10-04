@@ -265,13 +265,48 @@ app.get([
       headers['Range'] = req.headers.range;
     }
 
+    const isM3U8Route = req.path.includes('.m3u8') || targetUrl.includes('.m3u8');
+
+    if (!isM3U8Route) {
+      // Stream binary media (MP4 videos, TS chunks, encryption keys) directly via pipe
+      const response = await axios({
+        method: 'get',
+        url: targetUrl,
+        headers,
+        responseType: 'stream',
+        validateStatus: () => true,
+        timeout: 20000
+      });
+
+      res.status(response.status);
+
+      for (const [k, v] of Object.entries(response.headers)) {
+        if (['content-length', 'content-range', 'accept-ranges', 'content-type'].includes(k.toLowerCase())) {
+          res.setHeader(k, v);
+        }
+      }
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Headers', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+      res.setHeader('Access-Control-Allow-Private-Network', 'true');
+
+      if (req.path.includes('.mp4') || targetUrl.includes('.mp4')) {
+        res.setHeader('Content-Type', 'video/mp4');
+      } else if (req.path.includes('.ts') || targetUrl.includes('.ts')) {
+        res.setHeader('Content-Type', 'video/mp2t');
+      }
+
+      return response.data.pipe(res);
+    }
+
+    // Playlist parsing and link rewriting
     const response = await axios({
       method: 'get',
       url: targetUrl,
       headers,
       responseType: 'arraybuffer',
       validateStatus: () => true,
-      timeout: 25000
+      timeout: 10000
     });
 
     res.status(response.status);
@@ -286,69 +321,41 @@ app.get([
     res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
     res.setHeader('Access-Control-Allow-Private-Network', 'true');
 
-    // Handle MP4 Progressive Playback
-    const contentType = (response.headers['content-type'] || '').toLowerCase();
-    if (req.path.includes('.mp4') || targetUrl.includes('.mp4') || contentType.includes('video/mp4')) {
-      res.setHeader('Content-Type', 'video/mp4');
-      return res.send(response.data);
-    }
+    const text = Buffer.from(response.data).toString('utf8');
+    const lines = text.split('\n');
+    let isNextSub = false;
 
-    // Check if body is an M3U8 Playlist
-    let isPlaylist = false;
-    let text = '';
-    if (response.status === 200 && response.data && response.data.length > 0) {
-      const headerSnippet = response.data.slice(0, 30).toString('utf8');
-      if (headerSnippet.includes('#EXTM3U') || targetUrl.includes('.m3u8') || contentType.includes('mpegurl') || req.path.includes('.m3u8')) {
-        isPlaylist = true;
-        text = Buffer.from(response.data).toString('utf8');
+    const rewritten = lines.map(line => {
+      const trimmed = line.trim();
+      if (!trimmed) return line;
+
+      if (trimmed.startsWith('#')) {
+        if (trimmed.startsWith('#EXT-X-STREAM-INF:')) {
+          isNextSub = true;
+        }
+        if (trimmed.includes('URI="')) {
+          return line.replace(/URI="([^"]+)"/, (m, uri) => {
+            const fullKeyUrl = uri.startsWith('http') ? uri : new URL(uri, targetUrl).toString();
+            return `URI="${hostUrl}/proxy/segment.ts?url=${encodeURIComponent(fullKeyUrl)}&referer=${encodeURIComponent(referer)}"`;
+          });
+        }
+        return line;
       }
-    }
 
-    if (isPlaylist) {
-      const lines = text.split('\n');
-      let isNextSub = false;
+      let fullChunkUrl = trimmed;
+      if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+        fullChunkUrl = new URL(trimmed, targetUrl).toString();
+      }
 
-      const rewritten = lines.map(line => {
-        const trimmed = line.trim();
-        if (!trimmed) return line;
+      const isSub = isNextSub || fullChunkUrl.includes('.m3u8');
+      isNextSub = false;
+      const proxyPath = isSub ? '/proxy/sub.m3u8' : '/proxy/segment.ts';
 
-        if (trimmed.startsWith('#')) {
-          if (trimmed.startsWith('#EXT-X-STREAM-INF:')) {
-            isNextSub = true;
-          }
-          if (trimmed.includes('URI="')) {
-            return line.replace(/URI="([^"]+)"/, (m, uri) => {
-              const fullKeyUrl = uri.startsWith('http') ? uri : new URL(uri, targetUrl).toString();
-              return `URI="${hostUrl}/proxy/segment.ts?url=${encodeURIComponent(fullKeyUrl)}&referer=${encodeURIComponent(referer)}"`;
-            });
-          }
-          return line;
-        }
+      return `${hostUrl}${proxyPath}?url=${encodeURIComponent(fullChunkUrl)}&referer=${encodeURIComponent(referer)}`;
+    }).join('\n');
 
-        let fullChunkUrl = trimmed;
-        if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
-          fullChunkUrl = new URL(trimmed, targetUrl).toString();
-        }
-
-        const isSub = isNextSub || fullChunkUrl.includes('.m3u8');
-        isNextSub = false;
-        const proxyPath = isSub ? '/proxy/sub.m3u8' : '/proxy/segment.ts';
-
-        return `${hostUrl}${proxyPath}?url=${encodeURIComponent(fullChunkUrl)}&referer=${encodeURIComponent(referer)}`;
-      }).join('\n');
-
-      res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
-      return res.send(rewritten);
-    }
-
-    // Set video/mp2t for TS segments
-    if (targetUrl.includes('.ts') || req.path.includes('.ts')) {
-      res.setHeader('Content-Type', 'video/mp2t');
-    } else if (response.headers['content-type']) {
-      res.setHeader('Content-Type', response.headers['content-type']);
-    }
-
-    return res.send(response.data);
+    res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+    return res.send(rewritten);
   } catch (err) {
     console.error('Stream Proxy error:', err.message);
     if (!res.headersSent) {

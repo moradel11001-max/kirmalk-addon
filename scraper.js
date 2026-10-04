@@ -14,7 +14,7 @@ const http = axios.create({
     'Accept-Language': 'ar,en;q=0.8',
     'Referer': BASE
   },
-  timeout: 15000,
+  timeout: 3000,
   maxRedirects: 5
 });
 
@@ -478,13 +478,22 @@ async function getMeta(type, id, hostUrl = '') {
         description: found ? found.name : ''
       };
       if (meta.type === 'series') {
-        const epNum = extractEpisode(meta.name) || 1;
-        meta.videos = [{
-          id: `${id}:1:${epNum}:${cleanVid}`,
-          title: `الحلقة ${epNum}`,
-          season: 1,
-          episode: epNum
-        }];
+        if (initialData.seriesMeta && initialData.seriesMeta[cleanVid]) {
+          meta.videos = initialData.seriesMeta[cleanVid].map(ep => ({
+            id: `${id}:1:${ep.episode}:${ep.vid}`,
+            title: `الحلقة ${ep.episode}`,
+            season: 1,
+            episode: ep.episode
+          }));
+        } else {
+          const epNum = extractEpisode(meta.name) || 1;
+          meta.videos = [{
+            id: `${id}:1:${epNum}:${cleanVid}`,
+            title: `الحلقة ${epNum}`,
+            season: 1,
+            episode: epNum
+          }];
+        }
       }
     }
   }
@@ -564,22 +573,56 @@ async function getStreamsFor(baseId, season, episode, hostUrl = '') {
       targetVid = parts[3];
     } else {
       const epNum = parseInt(parts[2], 10) || 1;
-      const meta = await getMeta('series', parts[0]);
-      const ep = meta?.videos?.find(v => v.episode === epNum);
-      if (ep && ep.id.includes(':')) {
-        targetVid = ep.id.split(':')[3] || cleanId(parts[0]);
-      } else {
-        targetVid = cleanId(parts[0]);
+      const cleanBase = cleanId(parts[0]);
+
+      if (initialData.seriesMeta && initialData.seriesMeta[cleanBase]) {
+        const ep = initialData.seriesMeta[cleanBase].find(v => v.episode === epNum);
+        if (ep && ep.vid) targetVid = ep.vid;
+      }
+
+      if (!targetVid && initialData.servers && initialData.servers[cleanBase]) {
+        targetVid = cleanBase;
+      }
+
+      if (!targetVid) {
+        try {
+          const meta = await getMeta('series', parts[0]);
+          const ep = meta?.videos?.find(v => v.episode === epNum);
+          if (ep && ep.id && ep.id.includes(':')) {
+            targetVid = ep.id.split(':')[3] || cleanBase;
+          } else {
+            targetVid = cleanBase;
+          }
+        } catch (_) {
+          targetVid = cleanBase;
+        }
       }
     }
   } else if (season && episode) {
     const epNum = parseInt(episode, 10);
-    const meta = await getMeta('series', baseId);
-    const ep = meta?.videos?.find(v => v.episode === epNum);
-    if (ep && ep.id.includes(':')) {
-      targetVid = ep.id.split(':')[3] || cleanId(baseId);
-    } else {
-      targetVid = cleanId(baseId);
+    const cleanBase = cleanId(baseId);
+
+    if (initialData.seriesMeta && initialData.seriesMeta[cleanBase]) {
+      const ep = initialData.seriesMeta[cleanBase].find(v => v.episode === epNum);
+      if (ep && ep.vid) targetVid = ep.vid;
+    }
+
+    if (!targetVid && initialData.servers && initialData.servers[cleanBase]) {
+      targetVid = cleanBase;
+    }
+
+    if (!targetVid) {
+      try {
+        const meta = await getMeta('series', baseId);
+        const ep = meta?.videos?.find(v => v.episode === epNum);
+        if (ep && ep.id && ep.id.includes(':')) {
+          targetVid = ep.id.split(':')[3] || cleanBase;
+        } else {
+          targetVid = cleanBase;
+        }
+      } catch (_) {
+        targetVid = cleanBase;
+      }
     }
   } else {
     targetVid = cleanId(baseId);
@@ -590,7 +633,17 @@ async function getStreamsFor(baseId, season, episode, hostUrl = '') {
   const { servers } = await scrapeWatchServers(targetVid);
   if (!servers || servers.length === 0) return [];
 
-  const streamPromises = servers.map(async (s) => {
+  // Extract raw embed URL if wrapped inside iframe HTML tag
+  const cleanedServers = servers.map(s => {
+    let embed = s.embed;
+    if (embed && (embed.includes('<iframe') || embed.includes('<IFRAME'))) {
+      const m = embed.match(/src=["']([^"']+)["']/i);
+      if (m) embed = m[1];
+    }
+    return { ...s, embed };
+  });
+
+  const streamPromises = cleanedServers.map(async (s) => {
     try {
       const resolved = await resolveEmbed(s.embed);
       if (resolved && resolved.length > 0) {
