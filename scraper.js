@@ -507,5 +507,6 @@ module.exports = {
   scrapeWatchServers,
   extractVid,
   extractEpisode,
-  BASE
+  BASE,
+  http
 };

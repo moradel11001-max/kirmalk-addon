@@ -129,26 +129,27 @@ app.get('/manifest.json', (req, res) => {
 // ---------- Debug CF Endpoint ----------
 app.get('/debug-cf', async (req, res) => {
   const tests = [
-    { name: 'plain_okhttp', headers: { 'User-Agent': 'okhttp/4.9.3' } },
-    { name: 'okhttp_ref_slash', headers: { 'User-Agent': 'okhttp/4.9.3', 'Referer': 'https://kirmalk.com/' } },
-    { name: 'okhttp_current_scraper', headers: { 'User-Agent': 'okhttp/4.9.3', 'Accept-Language': 'ar,en;q=0.8', 'Referer': 'https://kirmalk.com' } },
-    { name: 'okhttp_5', headers: { 'User-Agent': 'okhttp/5.0.0-alpha.14' } },
-    { name: 'android_browser', headers: { 'User-Agent': 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36' } }
+    { name: 'movies_http', url: 'https://kirmalk.com/movies.php', useHttp: true },
+    { name: 'turk_http', url: 'https://kirmalk.com/category.php?cat=turk14', useHttp: true },
+    { name: 'turk_plain_slash', url: 'https://kirmalk.com/category.php?cat=turk14', headers: { 'User-Agent': 'okhttp/4.9.3', 'Referer': 'https://kirmalk.com/' } },
+    { name: 'turk_no_ref', url: 'https://kirmalk.com/category.php?cat=turk14', headers: { 'User-Agent': 'okhttp/4.9.3' } },
+    { name: 'search_ar_http', url: `https://kirmalk.com/search.php?keywords=${encodeURIComponent('مسلسل')}`, useHttp: true },
+    { name: 'search_ar_plain', url: `https://kirmalk.com/search.php?keywords=${encodeURIComponent('مسلسل')}`, headers: { 'User-Agent': 'okhttp/4.9.3', 'Referer': 'https://kirmalk.com/' } },
   ];
 
   const results = {};
   for (const t of tests) {
     try {
-      const resp = await axios.get('https://kirmalk.com/movies.php', {
-        headers: t.headers,
-        timeout: 7000
-      });
-      results[t.name] = { status: resp.status, len: resp.data.length, title: String(resp.data).slice(0, 100) };
+      const resp = t.useHttp
+        ? await require('./scraper').http.get(t.url)
+        : await axios.get(t.url, { headers: t.headers, timeout: 7000 });
+      results[t.name] = { status: resp.status, len: resp.data.length };
     } catch (err) {
       results[t.name] = {
         error: err.message,
         status: err.response?.status,
-        headers: err.response?.headers,
+        cfRay: err.response?.headers?.['cf-ray'],
+        server: err.response?.headers?.['server'],
         bodySnippet: typeof err.response?.data === 'string' ? err.response?.data.slice(0, 300) : null
       };
     }
