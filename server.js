@@ -126,6 +126,36 @@ app.get('/manifest.json', (req, res) => {
   res.json(manifest);
 });
 
+// ---------- Debug CF Endpoint ----------
+app.get('/debug-cf', async (req, res) => {
+  const tests = [
+    { name: 'plain_okhttp', headers: { 'User-Agent': 'okhttp/4.9.3' } },
+    { name: 'okhttp_ref_slash', headers: { 'User-Agent': 'okhttp/4.9.3', 'Referer': 'https://kirmalk.com/' } },
+    { name: 'okhttp_current_scraper', headers: { 'User-Agent': 'okhttp/4.9.3', 'Accept-Language': 'ar,en;q=0.8', 'Referer': 'https://kirmalk.com' } },
+    { name: 'okhttp_5', headers: { 'User-Agent': 'okhttp/5.0.0-alpha.14' } },
+    { name: 'android_browser', headers: { 'User-Agent': 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36' } }
+  ];
+
+  const results = {};
+  for (const t of tests) {
+    try {
+      const resp = await axios.get('https://kirmalk.com/movies.php', {
+        headers: t.headers,
+        timeout: 7000
+      });
+      results[t.name] = { status: resp.status, len: resp.data.length, title: String(resp.data).slice(0, 100) };
+    } catch (err) {
+      results[t.name] = {
+        error: err.message,
+        status: err.response?.status,
+        headers: err.response?.headers,
+        bodySnippet: typeof err.response?.data === 'string' ? err.response?.data.slice(0, 300) : null
+      };
+    }
+  }
+  res.json(results);
+});
+
 // ---------- Catalog Endpoint ----------
 app.get(/^\/catalog\/([^/]+)\/([^/]+?)(?:\.json|\/(.*))?$/, async (req, res) => {
   try {
