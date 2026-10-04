@@ -128,42 +128,34 @@ app.get('/manifest.json', (req, res) => {
 
 // ---------- Diagnostic Endpoint ----------
 app.get('/test-diag', async (req, res) => {
+  const results = {};
+
+  // Test 1: kirmalk.com with mobile app user-agent
   try {
-    const r = await axios.get('https://kirmalk.com/movies.php', {
+    const r1 = await axios.get('https://kirmalk.com/movies.php', {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-        'Accept-Language': 'ar,en-US;q=0.9,en;q=0.8',
-        'Sec-Ch-Ua': '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
-        'Sec-Ch-Ua-Mobile': '?0',
-        'Sec-Ch-Ua-Platform': '"Windows"',
-        'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'none',
-        'Sec-Fetch-User': '?1',
-        'Upgrade-Insecure-Requests': '1'
+        'User-Agent': 'okhttp/4.9.3',
+        'Accept': '*/*'
       },
-      timeout: 10000
+      timeout: 6000
     });
-    const cheerio = require('cheerio');
-    const $ = cheerio.load(r.data);
-    const cardCount = $('.video-card').length;
-    res.json({
-      status: r.status,
-      length: r.data.length,
-      cardsFound: cardCount,
-      pageTitle: $('title').text(),
-      preview: r.data.substring(0, 300)
-    });
+    results.kirmalk_mobile = { status: r1.status, length: r1.data.length, title: r1.data.slice(0, 100) };
   } catch (err) {
-    res.json({
-      error: err.message,
-      status: err.response?.status,
-      cfRay: err.response?.headers?.['cf-ray'],
-      server: err.response?.headers?.['server'],
-      data: err.response?.data?.substring(0, 300)
-    });
+    results.kirmalk_mobile = { error: err.message, status: err.response?.status };
   }
+
+  // Test 2: krmalk.tv
+  try {
+    const r2 = await axios.get('https://krmalk.tv/movies.php', {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+      timeout: 6000
+    });
+    results.krmalk_tv = { status: r2.status, length: r2.data.length, title: r2.data.slice(0, 100) };
+  } catch (err) {
+    results.krmalk_tv = { error: err.message, status: err.response?.status };
+  }
+
+  res.json(results);
 });
 
 // ---------- Catalog Endpoint ----------
