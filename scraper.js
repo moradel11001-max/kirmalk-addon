@@ -499,6 +499,12 @@ async function getMeta(type, id, hostUrl = '') {
 // ---------- Scraping Watch Servers (view.php) ----------
 async function scrapeWatchServers(vid) {
   const cleanVid = cleanId(vid);
+
+  // 1. Check bundled servers cache first!
+  if (initialData.servers && initialData.servers[cleanVid] && initialData.servers[cleanVid].length > 0) {
+    return { servers: initialData.servers[cleanVid] };
+  }
+
   const servers = [];
 
   try {
@@ -605,19 +611,25 @@ async function getStreamsFor(baseId, season, episode, hostUrl = '') {
           };
         });
       }
-
-      return [{
-        name: `Kirmalk`,
-        title: `[${s.label || `سيرفر ${s.server}`}] مشاهدة في المشغل الخارجي`,
-        externalUrl: s.embed
-      }];
+      return [];
     } catch (_) {
       return [];
     }
   });
 
   const streamLists = await Promise.all(streamPromises);
-  return streamLists.flat();
+  const playable = streamLists.flat();
+
+  if (playable.length > 0) {
+    return playable;
+  }
+
+  // If no embed could be resolved to a direct stream, fallback to external browser link
+  return servers.map(s => ({
+    name: `Kirmalk`,
+    title: `[${s.label || `سيرفر ${s.server}`}] مشاهدة في المشغل الخارجي`,
+    externalUrl: s.embed
+  }));
 }
 
 module.exports = {
