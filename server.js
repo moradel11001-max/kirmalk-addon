@@ -126,6 +126,36 @@ app.get('/manifest.json', (req, res) => {
   res.json(manifest);
 });
 
+// ---------- Diagnostic Endpoint ----------
+app.get('/test-diag', async (req, res) => {
+  try {
+    const r = await axios.get('https://kirmalk.com/movies.php', {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+        'Accept-Language': 'ar,en;q=0.8',
+        'Referer': 'https://kirmalk.com'
+      },
+      timeout: 10000
+    });
+    const cheerio = require('cheerio');
+    const $ = cheerio.load(r.data);
+    const cardCount = $('.video-card').length;
+    res.json({
+      status: r.status,
+      length: r.data.length,
+      cardsFound: cardCount,
+      pageTitle: $('title').text(),
+      preview: r.data.substring(0, 300)
+    });
+  } catch (err) {
+    res.json({
+      error: err.message,
+      status: err.response?.status,
+      data: err.response?.data?.substring(0, 300)
+    });
+  }
+});
+
 // ---------- Catalog Endpoint ----------
 app.get(['/catalog/:type/:id.json', '/catalog/:type/:id/:extra.json'], async (req, res) => {
   try {
