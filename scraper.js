@@ -14,7 +14,7 @@ const http = axios.create({
     'Accept-Language': 'ar,en;q=0.8',
     'Referer': BASE
   },
-  timeout: 3000,
+  timeout: 8000,
   maxRedirects: 5
 });
 

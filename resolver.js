@@ -6,7 +6,7 @@ const http = axios.create({
     'User-Agent': 'okhttp/4.9.3',
     'Referer': 'https://kirmalk.com/'
   },
-  timeout: 3500,
+  timeout: 8000,
   maxRedirects: 5
 });
 
