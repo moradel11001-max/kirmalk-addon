@@ -126,39 +126,6 @@ app.get('/manifest.json', (req, res) => {
   res.json(manifest);
 });
 
-// ---------- Test Resolve Endpoint ----------
-app.get('/test-resolve', async (req, res) => {
-  const url = req.query.url || 'https://s1.hdup400.com/embed-dhee0d7m819i.html';
-  try {
-    const { resolveEmbed, extractMediaUrls } = require('./resolver');
-    const axios = require('axios');
-    let fetchRes = null;
-    let fetchErr = null;
-    try {
-      fetchRes = await axios.get(url, {
-        headers: {
-          'User-Agent': 'okhttp/4.9.3',
-          'Referer': 'https://kirmalk.com/'
-        },
-        timeout: 10000
-      });
-    } catch (e) {
-      fetchErr = { msg: e.message, status: e.response?.status, data: typeof e.response?.data === 'string' ? e.response.data.slice(0, 300) : null };
-    }
-    const html = fetchRes ? fetchRes.data : null;
-    const media = html ? extractMediaUrls(html) : [];
-    res.json({
-      status: fetchRes?.status,
-      len: html?.length,
-      htmlSnippet: html ? String(html).slice(0, 300) : null,
-      fetchErr,
-      media
-    });
-  } catch (err) {
-    res.json({ error: err.message, stack: err.stack });
-  }
-});
-
 // ---------- Catalog Endpoint ----------
 app.get(/^\/catalog\/([^/]+)\/([^/]+?)(?:\.json|\/(.*))?$/, async (req, res) => {
   try {

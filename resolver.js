@@ -3,10 +3,10 @@ const cheerio = require('cheerio');
 
 const http = axios.create({
   headers: {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    'User-Agent': 'okhttp/4.9.3',
     'Referer': 'https://kirmalk.com/'
   },
-  timeout: 15000,
+  timeout: 5000,
   maxRedirects: 5
 });
 
