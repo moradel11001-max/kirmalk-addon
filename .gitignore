@@ -5,3 +5,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .DS_Store
+scripts/
+test_*.js
+build_series_test.js
+count_unique_series.js

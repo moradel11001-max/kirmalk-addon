@@ -116,11 +116,14 @@ function getFallbackMetas(type, genre, search) {
     return initialData.ramadan || [];
   }
 
-  // General series: combine series + turkish + egyptian
+  // General series: combine all series lists
   const combined = [
     ...(initialData.series || []),
     ...(initialData.turkish || []),
-    ...(initialData.egyptian || [])
+    ...(initialData.egyptian || []),
+    ...(initialData.syrian || []),
+    ...(initialData.gulf || []),
+    ...(initialData.ramadan || [])
   ];
   const seen = new Set();
   const list = [];
@@ -306,6 +309,17 @@ async function getCatalog(type, extra = {}, hostUrl = '') {
     genre = null;
   }
 
+  // For series without search: ALWAYS serve from consolidated unified catalog for clean cards & instant response
+  if (type === 'series' && !search) {
+    const fallbackList = getFallbackMetas('series', genre, null);
+    const paged = fallbackList.slice(skip, skip + 50);
+    const metas = (paged.length > 0 ? paged : (skip === 0 ? fallbackList.slice(0, 50) : [])).map(m => ({
+      ...m,
+      poster: formatPoster(m.poster, hostUrl)
+    }));
+    return { metas };
+  }
+
   const page = Math.floor(skip / 20) + 1;
   const cacheKey = `catalog_${type}_${search || genre || 'all'}_p${page}`;
 
@@ -374,6 +388,43 @@ async function getMeta(type, id, hostUrl = '') {
 
   if (!meta) {
     const cleanVid = cleanId(id);
+
+    // 1. Check bundled unifiedSeries first!
+    if (type === 'series' || id.startsWith('km_s_')) {
+      const unified = (initialData.unifiedSeries && (initialData.unifiedSeries[id] || initialData.unifiedSeries[cleanVid])) || null;
+      if (unified) {
+        meta = {
+          ...unified,
+          poster: formatPoster(unified.poster, hostUrl),
+          background: formatPoster(unified.background || unified.poster, hostUrl),
+          videos: (unified.videos || []).map(v => ({
+            ...v,
+            id: `${unified.id}:1:${v.episode}:${v.vid}`
+          }))
+        };
+        setCache(cacheKey, meta, 7200000);
+        return meta;
+      }
+    }
+
+    // 2. Check bundled movies & plays
+    if (type === 'movie' || id.startsWith('km_m_')) {
+      const foundMovie = [...(initialData.movies || []), ...(initialData.plays || [])].find(m => m.id === id || cleanId(m.id) === cleanVid);
+      if (foundMovie) {
+        meta = {
+          id: foundMovie.id,
+          type: 'movie',
+          name: foundMovie.name,
+          poster: formatPoster(foundMovie.poster, hostUrl),
+          background: formatPoster(foundMovie.poster, hostUrl),
+          description: foundMovie.description || foundMovie.name,
+          genres: foundMovie.genres || ['أفلام']
+        };
+        setCache(cacheKey, meta, 7200000);
+        return meta;
+      }
+    }
+
     try {
       const { data } = await http.get(`${BASE}/watch.php?vid=${cleanVid}`);
       const $ = cheerio.load(data);
@@ -505,7 +556,7 @@ async function getMeta(type, id, hostUrl = '') {
   };
 }
 
-// ---------- Scraping Watch Servers (view.php) ----------
+// ---------- Scraping Watch Servers (view.php / watch.php / embed.php) ----------
 async function scrapeWatchServers(vid) {
   const cleanVid = cleanId(vid);
 
@@ -516,24 +567,25 @@ async function scrapeWatchServers(vid) {
 
   const servers = [];
 
+  // Try view.php
   try {
     const { data } = await http.get(`${BASE}/view.php?vid=${cleanVid}`);
     const $ = cheerio.load(data);
 
-    $('#WatchServers .server-btn').each((_, el) => {
-      const btn = $(el);
-      const embed = btn.attr('data-embed');
-      if (!embed) return;
-      servers.push({
-        server: parseInt(btn.attr('data-server') || '0', 10),
-        label: btn.find('span').text().trim() || `سيرفر ${btn.attr('data-server')}`,
-        embed
-      });
+    $('#WatchServers [data-embed]').each((_, el) => {
+      const embed = $(el).attr('data-embed');
+      if (embed) {
+        servers.push({
+          server: parseInt($(el).attr('data-server') || '0', 10),
+          label: $(el).find('span').text().trim() || $(el).text().trim() || `سيرفر ${$(el).attr('data-server') || ''}`,
+          embed
+        });
+      }
     });
 
     if (servers.length === 0) {
-      const iframeSrc = $('#Playerholder iframe').attr('src');
-      if (iframeSrc) {
+      const iframeSrc = $('#Playerholder iframe, iframe').attr('src');
+      if (iframeSrc && !iframeSrc.includes('challenge-platform')) {
         servers.push({
           server: 1,
           label: 'سيرفر رئيسي',
@@ -541,20 +593,44 @@ async function scrapeWatchServers(vid) {
         });
       }
     }
-  } catch (err) {
-    console.error('view.php fetch error:', err.message);
-  }
+  } catch (err) {}
 
+  // Try watch.php
   if (servers.length === 0) {
     try {
       const { data } = await http.get(`${BASE}/watch.php?vid=${cleanVid}`);
-      const $ = cheerio.load(data);
-      const embedUrl = $('link[itemprop="embedUrl"]').attr('href');
-      if (embedUrl) {
+      const m = data.match(/"embedUrl":\s*"([^"]+)"/);
+      if (m && m[1]) {
         servers.push({
           server: 1,
           label: 'سيرفر رئيسي',
-          embed: embedUrl
+          embed: m[1]
+        });
+      } else {
+        const $ = cheerio.load(data);
+        const link = $('link[itemprop="embedUrl"]').attr('href');
+        if (link) {
+          servers.push({
+            server: 1,
+            label: 'سيرفر رئيسي',
+            embed: link
+          });
+        }
+      }
+    } catch (_) {}
+  }
+
+  // Try embed.php
+  if (servers.length === 0) {
+    try {
+      const { data } = await http.get(`${BASE}/embed.php?vid=${cleanVid}`);
+      const $ = cheerio.load(data);
+      const iframeSrc = $('iframe').attr('src');
+      if (iframeSrc && !iframeSrc.includes('challenge-platform')) {
+        servers.push({
+          server: 1,
+          label: 'سيرفر رئيسي',
+          embed: iframeSrc
         });
       }
     } catch (_) {}
@@ -575,54 +651,38 @@ async function getStreamsFor(baseId, season, episode, hostUrl = '') {
       const epNum = parseInt(parts[2], 10) || 1;
       const cleanBase = cleanId(parts[0]);
 
-      if (initialData.seriesMeta && initialData.seriesMeta[cleanBase]) {
+      if (initialData.unifiedSeries && (initialData.unifiedSeries[cleanBase] || initialData.unifiedSeries[`km_s_${cleanBase}`])) {
+        const s = initialData.unifiedSeries[cleanBase] || initialData.unifiedSeries[`km_s_${cleanBase}`];
+        const ep = s.videos?.find(v => v.episode === epNum);
+        if (ep && ep.vid) targetVid = ep.vid;
+      }
+
+      if (!targetVid && initialData.seriesMeta && initialData.seriesMeta[cleanBase]) {
         const ep = initialData.seriesMeta[cleanBase].find(v => v.episode === epNum);
         if (ep && ep.vid) targetVid = ep.vid;
       }
 
-      if (!targetVid && initialData.servers && initialData.servers[cleanBase]) {
-        targetVid = cleanBase;
-      }
-
       if (!targetVid) {
-        try {
-          const meta = await getMeta('series', parts[0]);
-          const ep = meta?.videos?.find(v => v.episode === epNum);
-          if (ep && ep.id && ep.id.includes(':')) {
-            targetVid = ep.id.split(':')[3] || cleanBase;
-          } else {
-            targetVid = cleanBase;
-          }
-        } catch (_) {
-          targetVid = cleanBase;
-        }
+        targetVid = cleanBase;
       }
     }
   } else if (season && episode) {
     const epNum = parseInt(episode, 10);
     const cleanBase = cleanId(baseId);
 
-    if (initialData.seriesMeta && initialData.seriesMeta[cleanBase]) {
+    if (initialData.unifiedSeries && (initialData.unifiedSeries[cleanBase] || initialData.unifiedSeries[`km_s_${cleanBase}`])) {
+      const s = initialData.unifiedSeries[cleanBase] || initialData.unifiedSeries[`km_s_${cleanBase}`];
+      const ep = s.videos?.find(v => v.episode === epNum);
+      if (ep && ep.vid) targetVid = ep.vid;
+    }
+
+    if (!targetVid && initialData.seriesMeta && initialData.seriesMeta[cleanBase]) {
       const ep = initialData.seriesMeta[cleanBase].find(v => v.episode === epNum);
       if (ep && ep.vid) targetVid = ep.vid;
     }
 
-    if (!targetVid && initialData.servers && initialData.servers[cleanBase]) {
-      targetVid = cleanBase;
-    }
-
     if (!targetVid) {
-      try {
-        const meta = await getMeta('series', baseId);
-        const ep = meta?.videos?.find(v => v.episode === epNum);
-        if (ep && ep.id && ep.id.includes(':')) {
-          targetVid = ep.id.split(':')[3] || cleanBase;
-        } else {
-          targetVid = cleanBase;
-        }
-      } catch (_) {
-        targetVid = cleanBase;
-      }
+      targetVid = cleanBase;
     }
   } else {
     targetVid = cleanId(baseId);
