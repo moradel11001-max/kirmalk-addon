@@ -114,6 +114,15 @@ async function runAutoUpdate() {
 
   fs.writeFileSync(DATA_FILE, JSON.stringify(initialData, null, 2), 'utf8');
   console.log(`Auto-Update complete! Added servers for ${newServersCount} new items.`);
+
+  // 3. Sync Akwam & WeCima multi-source content
+  try {
+    const { runMerger } = require('./merge_multi_sources');
+    console.log('Running Akwam & WeCima sync...');
+    await runMerger();
+  } catch (err) {
+    console.error('Multi-source merger error in auto update:', err.message);
+  }
 }
 
 if (require.main === module) {

@@ -3,6 +3,8 @@ const path = require('path');
 const axios = require('axios');
 const cheerio = require('cheerio');
 const { resolveEmbed } = require('./resolver');
+const { resolveAkwamStreams } = require('./sources/akwam');
+const { resolveWeCimaStreams } = require('./sources/wecima');
 
 const BASE = 'https://kirmalk.com';
 const CACHE_FILE = path.join(__dirname, 'cache.json');
@@ -21,20 +23,20 @@ const http = axios.create({
 // ---------- Stremio Manifest ----------
 const manifest = {
   id: "org.kirmalk.addon",
-  version: "1.0.0",
-  name: "Kirmalk TV",
-  description: "أفلام ومسلسلات موقع كرمالك بجودة عالية (Kirmalk Addon)",
+  version: "1.1.0",
+  name: "كرمالك TV (Kirmalk + Akwam + WeCima)",
+  description: "أفلام ومسلسلات عربية وتركية وأجنبية بجودة عالية مع سيرفرات بديلة من كرمالك وأكوام ووي سيما",
   resources: ["catalog", "meta", "stream"],
   types: ["movie", "series"],
   catalogs: [
     {
       type: "movie",
       id: "kirmalk_movies",
-      name: "كرمالك - أفلام",
+      name: "الأفلام (Movies)",
       extra: [
         {
           name: "genre",
-          options: ["الكل", "أفلام عربي", "مسرحيات"],
+          options: ["الكل", "أفلام عربي", "أفلام أجنبي", "أفلام تركية", "مسرحيات"],
           isRequired: false
         },
         { name: "search", isRequired: false },
@@ -44,11 +46,11 @@ const manifest = {
     {
       type: "series",
       id: "kirmalk_series",
-      name: "كرمالك - مسلسلات",
+      name: "المسلسلات (Series)",
       extra: [
         {
           name: "genre",
-          options: ["الكل", "مسلسلات تركية", "مسلسلات مصرية", "مسلسلات شامية", "مسلسلات خليجية", "مسلسلات رمضان"],
+          options: ["الكل", "مسلسلات عربية", "مسلسلات تركية", "مسلسلات مصرية", "مسلسلات شامية", "مسلسلات خليجية", "مسلسلات رمضان", "مسلسلات أجنبية", "مسلسلات مدبلجة"],
           isRequired: false
         },
         { name: "search", isRequired: false },
@@ -56,7 +58,7 @@ const manifest = {
       ]
     }
   ],
-  idPrefixes: ["km_"]
+  idPrefixes: ["km_", "ak_", "wc_"]
 };
 
 // ---------- Static Fallback Catalog (Bundled) ----------
@@ -81,7 +83,10 @@ function getFallbackMetas(type, genre, search) {
       ...(initialData.syrian || []),
       ...(initialData.gulf || []),
       ...(initialData.ramadan || []),
-      ...(initialData.plays || [])
+      ...(initialData.plays || []),
+      ...(initialData.foreign_movies || []),
+      ...(initialData.foreign_series || []),
+      ...(initialData.dubbed_series || [])
     ];
     const seen = new Set();
     const results = [];
@@ -99,6 +104,12 @@ function getFallbackMetas(type, genre, search) {
   if (type === 'movie') {
     if (genre === 'مسرحيات') {
       return initialData.plays || [];
+    } else if (genre === 'أفلام أجنبي') {
+      return initialData.foreign_movies || [];
+    } else if (genre === 'أفلام تركية') {
+      return (initialData.movies || []).filter(m => m.category === 'افلام-تركية' || /تركي/i.test(m.name));
+    } else if (genre === 'أفلام عربي') {
+      return (initialData.movies || []).filter(m => !m.section || m.section === 29 || m.category === 'افلام-عربي' || m.source === 'kirmalk');
     }
     return initialData.movies || [];
   }
@@ -114,6 +125,27 @@ function getFallbackMetas(type, genre, search) {
     return initialData.gulf || [];
   } else if (genre === 'مسلسلات رمضان') {
     return initialData.ramadan || [];
+  } else if (genre === 'مسلسلات أجنبية') {
+    return initialData.foreign_series || [];
+  } else if (genre === 'مسلسلات مدبلجة') {
+    return initialData.dubbed_series || [];
+  } else if (genre === 'مسلسلات عربية') {
+    const combinedArabic = [
+      ...(initialData.egyptian || []),
+      ...(initialData.syrian || []),
+      ...(initialData.gulf || []),
+      ...(initialData.ramadan || []),
+      ...(initialData.series || []).filter(s => s.section === 29 || s.category === 'مسلسلات-عربي')
+    ];
+    const seen = new Set();
+    const list = [];
+    for (const item of combinedArabic) {
+      if (!seen.has(item.id)) {
+        seen.add(item.id);
+        list.push(item);
+      }
+    }
+    return list;
   }
 
   // General series: combine all series lists
@@ -123,7 +155,8 @@ function getFallbackMetas(type, genre, search) {
     ...(initialData.egyptian || []),
     ...(initialData.syrian || []),
     ...(initialData.gulf || []),
-    ...(initialData.ramadan || [])
+    ...(initialData.ramadan || []),
+    ...(initialData.dubbed_series || [])
   ];
   const seen = new Set();
   const list = [];
@@ -181,7 +214,11 @@ function extractVid(href) {
 
 function cleanId(id) {
   if (!id) return '';
-  return id.replace(/^km_[ms]_?/, '').replace(/^km_/, '');
+  let cleaned = id.replace(/^(km|ak|wc)_[ms]_?/, '').replace(/^(km|ak|wc)_/, '');
+  try {
+    cleaned = decodeURIComponent(cleaned);
+  } catch (_) {}
+  return cleaned;
 }
 
 function extractEpisode(title) {
@@ -312,6 +349,17 @@ async function getCatalog(type, extra = {}, hostUrl = '') {
   // For series without search: ALWAYS serve from consolidated unified catalog for clean cards & instant response
   if (type === 'series' && !search) {
     const fallbackList = getFallbackMetas('series', genre, null);
+    const paged = fallbackList.slice(skip, skip + 50);
+    const metas = (paged.length > 0 ? paged : (skip === 0 ? fallbackList.slice(0, 50) : [])).map(m => ({
+      ...m,
+      poster: formatPoster(m.poster, hostUrl)
+    }));
+    return { metas };
+  }
+
+  // For movies without search: ALWAYS serve from consolidated catalog for instant response
+  if (type === 'movie' && !search) {
+    const fallbackList = getFallbackMetas('movie', genre, null);
     const paged = fallbackList.slice(skip, skip + 50);
     const metas = (paged.length > 0 ? paged : (skip === 0 ? fallbackList.slice(0, 50) : [])).map(m => ({
       ...m,
@@ -559,10 +607,19 @@ async function getMeta(type, id, hostUrl = '') {
 // ---------- Scraping Watch Servers (view.php / watch.php / embed.php) ----------
 async function scrapeWatchServers(vid) {
   const cleanVid = cleanId(vid);
+  let decodedVid = cleanVid;
+  try { decodedVid = decodeURIComponent(cleanVid); } catch (_) {}
+  let encodedVid = encodeURIComponent(decodedVid);
 
   // 1. Check bundled servers cache first!
-  if (initialData.servers && initialData.servers[cleanVid] && initialData.servers[cleanVid].length > 0) {
-    return { servers: initialData.servers[cleanVid] };
+  if (initialData.servers) {
+    if (initialData.servers[cleanVid]?.length) return { servers: initialData.servers[cleanVid] };
+    if (initialData.servers[decodedVid]?.length) return { servers: initialData.servers[decodedVid] };
+    if (initialData.servers[encodedVid]?.length) return { servers: initialData.servers[encodedVid] };
+    if (initialData.servers[`wc_m_${decodedVid}`]?.length) return { servers: initialData.servers[`wc_m_${decodedVid}`] };
+    if (initialData.servers[`wc_s_${decodedVid}`]?.length) return { servers: initialData.servers[`wc_s_${decodedVid}`] };
+    if (initialData.servers[`ak_m_${decodedVid}`]?.length) return { servers: initialData.servers[`ak_m_${decodedVid}`] };
+    if (initialData.servers[`ak_s_${decodedVid}`]?.length) return { servers: initialData.servers[`ak_s_${decodedVid}`] };
   }
 
   const servers = [];
@@ -690,7 +747,20 @@ async function getStreamsFor(baseId, season, episode, hostUrl = '') {
 
   if (!targetVid) return [];
 
-  const { servers } = await scrapeWatchServers(targetVid);
+  let { servers } = await scrapeWatchServers(targetVid);
+
+  // Fallback: check if baseId matches a movie directly in initialData.movies
+  if ((!servers || servers.length === 0) && initialData.movies) {
+    const movie = initialData.movies.find(m => m.id === baseId || cleanId(m.id) === targetVid);
+    if (movie && movie.href) {
+      if (movie.source === 'wecima') {
+        servers = [{ server: 1, label: 'سيرفر وي سيما (HD HLS)', embed: movie.href, source: 'wecima' }];
+      } else if (movie.source === 'akwam') {
+        servers = [{ server: 1, label: 'سيرفر أكوام (1080p MP4)', embed: movie.href, source: 'akwam' }];
+      }
+    }
+  }
+
   if (!servers || servers.length === 0) return [];
 
   // Extract raw embed URL if wrapped inside iframe HTML tag
@@ -705,7 +775,17 @@ async function getStreamsFor(baseId, season, episode, hostUrl = '') {
 
   const streamPromises = cleanedServers.map(async (s) => {
     try {
-      const resolved = await resolveEmbed(s.embed);
+      let resolved = [];
+      const sSource = s.source || (s.embed && s.embed.includes('akwam') ? 'akwam' : (s.embed && s.embed.includes('wecima') ? 'wecima' : 'kirmalk'));
+
+      if (sSource === 'akwam') {
+        resolved = await resolveAkwamStreams(s.embed);
+      } else if (sSource === 'wecima') {
+        resolved = await resolveWeCimaStreams(s.embed);
+      } else {
+        resolved = await resolveEmbed(s.embed);
+      }
+
       if (resolved && resolved.length > 0) {
         return resolved.map(r => {
           const referer = r.referer || s.embed;
@@ -715,9 +795,18 @@ async function getStreamsFor(baseId, season, episode, hostUrl = '') {
             ? `${hostUrl}${endpoint}?url=${encodeURIComponent(r.url)}&referer=${encodeURIComponent(referer)}`
             : r.url;
 
+          let sourceName = 'كرمالك';
+          if (sSource === 'akwam') sourceName = 'أكوام';
+          else if (sSource === 'wecima') sourceName = 'وي سيما';
+
+          let serverTitle = r.title || 'HD';
+          if (s.label && !serverTitle.includes(s.label)) {
+            serverTitle = `[${s.label}] ${serverTitle}`;
+          }
+
           return {
-            name: `Kirmalk`,
-            title: `[${s.label || `سيرفر ${s.server}`}] ${r.title || 'HD'}`,
+            name: sourceName,
+            title: serverTitle,
             url: streamUrl,
             behaviorHints: {
               notWebReady: false

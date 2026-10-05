@@ -101,14 +101,14 @@ app.get('/', (req, res) => {
     </head>
     <body>
       <div class="card">
-        <h1>كرمالك TV (Kirmalk)</h1>
-        <p>إضافة ستريميو الرسمية لمشاهدة الأفلام والمسلسلات العربية والتركية من موقع كرمالك.</p>
+        <h1>كرمالك TV (Kirmalk + Akwam + WeCima)</h1>
+        <p>إضافة ستريميو الشاملة لمشاهدة الأفلام والمسلسلات العربية والتركية والأجنبية مع سيرفرات احتياطية من كرمالك وأكوام ووي سيما.</p>
         
         <div>
-          <span class="tag">🎬 أفلام</span>
-          <span class="tag">📺 مسلسلات</span>
-          <span class="tag">🔍 بحث فوري</span>
-          <span class="tag">⚡ Android TV ExoPlayer Ready</span>
+          <span class="tag">🎬 أفلام عربي وأجنبي</span>
+          <span class="tag">📺 مسلسلات تركية وعربية</span>
+          <span class="tag">⚡ سيرفرات احتياطية متعددة</span>
+          <span class="tag">📺 Android TV ExoPlayer Ready</span>
         </div>
 
         <a class="btn" href="${stremioInstallUrl}">تثبيت على Stremio</a>
@@ -216,13 +216,18 @@ app.get('/proxy/image.jpg', async (req, res) => {
     return res.status(400).send('Missing url parameter');
   }
 
+  let referer = 'https://kirmalk.com/';
+  try {
+    referer = new URL(imageUrl).origin + '/';
+  } catch (_) {}
+
   try {
     const response = await axios({
       method: 'get',
       url: imageUrl,
       headers: {
         'User-Agent': 'okhttp/4.9.3',
-        'Referer': 'https://kirmalk.com/'
+        'Referer': referer
       },
       responseType: 'arraybuffer',
       timeout: 10000
