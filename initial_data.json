@@ -3131,6 +3131,14 @@
       "poster": "https://wecima.onl/photos/shares/imdb/tt4114762.jpg",
       "source": "wecima",
       "href": "https://wecima.onl/film/فيلم-العشق-يشبهك-ask-sana-benzer-2015-مترجم-اون-لاين"
+    },
+    {
+      "id": "ak_m_11496",
+      "type": "movie",
+      "name": "Insidious: Out of the Further",
+      "poster": "https://img.downet.net/thumb/178x260/uploads/HGmWL.webp",
+      "source": "akwam",
+      "href": "https://akwam.ss/movie/11496/insidious-out-of-the-further"
     }
   ],
   "series": [
@@ -4726,6 +4734,20 @@
       "name": "مسلسل بارينيتي",
       "poster": "https://wecima.onl/photos/uploads/1757619077_1757350629_1757266118_1757013157_1744148591_IMG-20250111-WA0066.jpg",
       "source": "wecima"
+    },
+    {
+      "id": "ak_s_5814",
+      "type": "series",
+      "name": "سقف الوالد الموسم الثاني",
+      "poster": "https://img.downet.net/thumb/178x260/uploads/DcSE1.jpg",
+      "source": "akwam"
+    },
+    {
+      "id": "ak_s_5813",
+      "type": "series",
+      "name": "احلى نصيب",
+      "poster": "https://img.downet.net/thumb/178x260/uploads/ric4v.webp",
+      "source": "akwam"
     }
   ],
   "turkish": [
@@ -7022,6 +7044,14 @@
         "server": 1,
         "label": "سيرفر أكوام (1080p MP4)",
         "embed": "https://akwam.ss/movie/11490/500-miles",
+        "source": "akwam"
+      }
+    ],
+    "11496": [
+      {
+        "server": 1,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11496/insidious-out-of-the-further",
         "source": "akwam"
       }
     ],
@@ -26264,6 +26294,70 @@
         "server": 1,
         "label": "سيرفر أكوام (MP4)",
         "embed": "https://akwam.ss/episode/103134/سجين-الحب-مدبلج/الحلقة-50",
+        "source": "akwam"
+      }
+    ],
+    "103135": [
+      {
+        "server": 1,
+        "label": "سيرفر أكوام (MP4)",
+        "embed": "https://akwam.ss/episode/103135/احلى-نصيب/الحلقة-1",
+        "source": "akwam"
+      }
+    ],
+    "103136": [
+      {
+        "server": 1,
+        "label": "سيرفر أكوام (MP4)",
+        "embed": "https://akwam.ss/episode/103136/احلى-نصيب/الحلقة-2",
+        "source": "akwam"
+      }
+    ],
+    "103137": [
+      {
+        "server": 1,
+        "label": "سيرفر أكوام (MP4)",
+        "embed": "https://akwam.ss/episode/103137/احلى-نصيب/الحلقة-3",
+        "source": "akwam"
+      }
+    ],
+    "103138": [
+      {
+        "server": 1,
+        "label": "سيرفر أكوام (MP4)",
+        "embed": "https://akwam.ss/episode/103138/احلى-نصيب/الحلقة-4",
+        "source": "akwam"
+      }
+    ],
+    "103139": [
+      {
+        "server": 1,
+        "label": "سيرفر أكوام (MP4)",
+        "embed": "https://akwam.ss/episode/103139/احلى-نصيب/الحلقة-5",
+        "source": "akwam"
+      }
+    ],
+    "103140": [
+      {
+        "server": 1,
+        "label": "سيرفر أكوام (MP4)",
+        "embed": "https://akwam.ss/episode/103140/سقف-الوالد-الموسم-الثاني/الحلقة-1",
+        "source": "akwam"
+      }
+    ],
+    "103141": [
+      {
+        "server": 1,
+        "label": "سيرفر أكوام (MP4)",
+        "embed": "https://akwam.ss/episode/103141/سقف-الوالد-الموسم-الثاني/الحلقة-2",
+        "source": "akwam"
+      }
+    ],
+    "103142": [
+      {
+        "server": 1,
+        "label": "سيرفر أكوام (MP4)",
+        "embed": "https://akwam.ss/episode/103142/سقف-الوالد-الموسم-الثاني/الحلقة-3",
         "source": "akwam"
       }
     ],
@@ -96702,6 +96796,686 @@
         "embed": "https://wecima.onl/episode/مسلسل-امنية-وان-تحققت-الحلقة-917-مدبلجة",
         "source": "wecima"
       }
+    ],
+    "ak_m_11469": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11469/المهايطية",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11400": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11400/فيزا",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11384": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11384/moana-مدبلج-1",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11361": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11361/the-runner-مدبلج-للعربية",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11349": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11349/طلق-صناعي",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11321": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11321/حكاية-لعبة-toy-story-5-1",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11204": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11204/بنسيون-دلال",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11141": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11141/الدور-السابع",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11066": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11066/سوار",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11065": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11065/عصابة-الماكس",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11064": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11064/مستر-إكس",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_10948": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/10948/مملكة-القصب-1",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_10944": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/10944/سلمى-وقمر",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_10939": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/10939/اللي-باقي-منك",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_10916": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/10916/قرقاشة",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_10726": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/10726/جرس-إنذار-الحفرة",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_10706": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/10706/صوت-هند-رجب",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_10701": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/10701/joy-awards-2026",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_10685": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/10685/مسرحية-أنستونا",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_10684": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/10684/yunan",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_10683": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/10683/ده-صوت-إيه-ده",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_10531": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/10531/palestine-36",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_10486": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/10486/ضي-سيرة-أهل-الضي",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_10439": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/10439/غميضة",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_10329": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/10329/سمبوسة-باتي",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_10279": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/10279/وحوش-عرس-النار",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_10195": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/10195/السيستم",
+        "source": "akwam"
+      }
+    ],
+    "wc_m_%D9%81%D9%8A%D9%84%D9%85-spider-man%3A-brand-new-d": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11495/spider-man-brand-new-day",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11490": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11490/500-miles",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11489": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11489/union-county",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11488": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11488/the-swan-behind-the-mirror",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11487": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11487/the-last-first-winter-k2",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11486": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11486/schumacher-94-the-birth-of-a-legend",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11484": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11484/verity",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11483": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11483/stranglehold",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11482": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11482/the-weight",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11481": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11481/buzzkill",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11480": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11480/doing-life",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11479": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11479/hellfire",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11478": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11478/hunting-season",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11468": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11468/virginia-woolf-s-night-day",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11466": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11466/the-nice-ones",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11465": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11465/ghost-light",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11464": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11464/the-uprising",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11463": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11463/the-deputy",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11462": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11462/legend-of-the-white-dragon",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11461": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11461/unabomber",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11460": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11460/influencers",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11459": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11459/runner",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11454": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11454/the-plantation",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11453": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11453/rage-of-stars",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11452": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11452/one-last-shot",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11451": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11451/heart-of-the-beast-1",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11386": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11386/idiots",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11311": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11311/ice-cream-man",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11450": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11450/couples-weekend",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11449": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11449/a-great-awakening",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11448": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11448/the-blue-box",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11447": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11447/without-blood",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11445": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11445/sacrifice",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11444": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11444/black-box",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11443": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11443/the-last-kiss",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11442": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11442/teenage-sex-and-death-at-camp-miasma",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11440": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11440/best-of-the-best",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11439": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11439/youme-against-the-world",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11433": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11433/the-threesome",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11446": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11446/the-intern",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11432": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11432/spinal-tap-ii-the-end-continues",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11431": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11431/fackham-hall",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11428": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11428/lion-fist",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11427": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11427/gator-face",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11426": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11426/the-fires",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11425": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11425/the-rivals-of-amziah-king-1",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11424": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11424/tony",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11422": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11422/lorne",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11420": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11420/solo-mio",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11419": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11419/saipan",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11418": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11418/coutures",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11417": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11417/star-wars-the-mandalorian-and-grogu-مدبلج",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11415": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11415/kontinental-25",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11414": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11414/rose",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11413": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11413/dragonfly",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11412": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11412/den-sidste-viking",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11409": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11409/موانا-مدبلج-بالعامية-المصرية",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11408": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11408/reminders-of-him",
+        "source": "akwam"
+      }
     ]
   },
   "seriesMeta": {
@@ -111742,6 +112516,66 @@
         "season": 1,
         "episode": 5,
         "vid": "103114"
+      }
+    ],
+    "5813": [
+      {
+        "id": "ak_s_5813:1:1:103135",
+        "title": "الحلقة 1",
+        "season": 1,
+        "episode": 1,
+        "vid": "103135"
+      },
+      {
+        "id": "ak_s_5813:1:2:103136",
+        "title": "الحلقة 2",
+        "season": 1,
+        "episode": 2,
+        "vid": "103136"
+      },
+      {
+        "id": "ak_s_5813:1:3:103137",
+        "title": "الحلقة 3",
+        "season": 1,
+        "episode": 3,
+        "vid": "103137"
+      },
+      {
+        "id": "ak_s_5813:1:4:103138",
+        "title": "الحلقة 4",
+        "season": 1,
+        "episode": 4,
+        "vid": "103138"
+      },
+      {
+        "id": "ak_s_5813:1:5:103139",
+        "title": "الحلقة 5",
+        "season": 1,
+        "episode": 5,
+        "vid": "103139"
+      }
+    ],
+    "5814": [
+      {
+        "id": "ak_s_5814:1:1:103140",
+        "title": "الحلقة 1",
+        "season": 1,
+        "episode": 1,
+        "vid": "103140"
+      },
+      {
+        "id": "ak_s_5814:1:2:103141",
+        "title": "الحلقة 2",
+        "season": 1,
+        "episode": 2,
+        "vid": "103141"
+      },
+      {
+        "id": "ak_s_5814:1:3:103142",
+        "title": "الحلقة 3",
+        "season": 1,
+        "episode": 3,
+        "vid": "103142"
       }
     ],
     "fca91da3b": [
@@ -171713,6 +172547,82 @@
           "season": 1,
           "episode": 5,
           "vid": "103114"
+        }
+      ]
+    },
+    "5813": {
+      "id": "ak_s_5813",
+      "type": "series",
+      "name": "احلى نصيب",
+      "poster": "https://img.downet.net/thumb/178x260/uploads/ric4v.webp",
+      "source": "akwam",
+      "href": "https://akwam.ss/series/5813/احلى-نصيب",
+      "videos": [
+        {
+          "id": "ak_s_5813:1:1:103135",
+          "title": "الحلقة 1",
+          "season": 1,
+          "episode": 1,
+          "vid": "103135"
+        },
+        {
+          "id": "ak_s_5813:1:2:103136",
+          "title": "الحلقة 2",
+          "season": 1,
+          "episode": 2,
+          "vid": "103136"
+        },
+        {
+          "id": "ak_s_5813:1:3:103137",
+          "title": "الحلقة 3",
+          "season": 1,
+          "episode": 3,
+          "vid": "103137"
+        },
+        {
+          "id": "ak_s_5813:1:4:103138",
+          "title": "الحلقة 4",
+          "season": 1,
+          "episode": 4,
+          "vid": "103138"
+        },
+        {
+          "id": "ak_s_5813:1:5:103139",
+          "title": "الحلقة 5",
+          "season": 1,
+          "episode": 5,
+          "vid": "103139"
+        }
+      ]
+    },
+    "5814": {
+      "id": "ak_s_5814",
+      "type": "series",
+      "name": "سقف الوالد الموسم الثاني",
+      "poster": "https://img.downet.net/thumb/178x260/uploads/DcSE1.jpg",
+      "source": "akwam",
+      "href": "https://akwam.ss/series/5814/سقف-الوالد-الموسم-الثاني",
+      "videos": [
+        {
+          "id": "ak_s_5814:1:1:103140",
+          "title": "الحلقة 1",
+          "season": 1,
+          "episode": 1,
+          "vid": "103140"
+        },
+        {
+          "id": "ak_s_5814:1:2:103141",
+          "title": "الحلقة 2",
+          "season": 1,
+          "episode": 2,
+          "vid": "103141"
+        },
+        {
+          "id": "ak_s_5814:1:3:103142",
+          "title": "الحلقة 3",
+          "season": 1,
+          "episode": 3,
+          "vid": "103142"
         }
       ]
     },
@@ -330566,6 +331476,82 @@
           "vid": "%D9%85%D8%B3%D9%84%D8%B3%D9%84-%D8%A8%D8"
         }
       ]
+    },
+    "ak_s_5814": {
+      "id": "ak_s_5814",
+      "type": "series",
+      "name": "سقف الوالد الموسم الثاني",
+      "poster": "https://img.downet.net/thumb/178x260/uploads/DcSE1.jpg",
+      "source": "akwam",
+      "href": "https://akwam.ss/series/5814/سقف-الوالد-الموسم-الثاني",
+      "videos": [
+        {
+          "id": "ak_s_5814:1:1:103140",
+          "title": "الحلقة 1",
+          "season": 1,
+          "episode": 1,
+          "vid": "103140"
+        },
+        {
+          "id": "ak_s_5814:1:2:103141",
+          "title": "الحلقة 2",
+          "season": 1,
+          "episode": 2,
+          "vid": "103141"
+        },
+        {
+          "id": "ak_s_5814:1:3:103142",
+          "title": "الحلقة 3",
+          "season": 1,
+          "episode": 3,
+          "vid": "103142"
+        }
+      ]
+    },
+    "ak_s_5813": {
+      "id": "ak_s_5813",
+      "type": "series",
+      "name": "احلى نصيب",
+      "poster": "https://img.downet.net/thumb/178x260/uploads/ric4v.webp",
+      "source": "akwam",
+      "href": "https://akwam.ss/series/5813/احلى-نصيب",
+      "videos": [
+        {
+          "id": "ak_s_5813:1:1:103135",
+          "title": "الحلقة 1",
+          "season": 1,
+          "episode": 1,
+          "vid": "103135"
+        },
+        {
+          "id": "ak_s_5813:1:2:103136",
+          "title": "الحلقة 2",
+          "season": 1,
+          "episode": 2,
+          "vid": "103136"
+        },
+        {
+          "id": "ak_s_5813:1:3:103137",
+          "title": "الحلقة 3",
+          "season": 1,
+          "episode": 3,
+          "vid": "103137"
+        },
+        {
+          "id": "ak_s_5813:1:4:103138",
+          "title": "الحلقة 4",
+          "season": 1,
+          "episode": 4,
+          "vid": "103138"
+        },
+        {
+          "id": "ak_s_5813:1:5:103139",
+          "title": "الحلقة 5",
+          "season": 1,
+          "episode": 5,
+          "vid": "103139"
+        }
+      ]
     }
   },
   "epToSeries": {
@@ -332690,6 +333676,14 @@
     "103131": "ak_s_5555",
     "103133": "ak_s_5555",
     "103134": "ak_s_5555",
+    "103135": "ak_s_5813",
+    "103136": "ak_s_5813",
+    "103137": "ak_s_5813",
+    "103138": "ak_s_5813",
+    "103139": "ak_s_5813",
+    "103140": "ak_s_5814",
+    "103141": "ak_s_5814",
+    "103142": "ak_s_5814",
     "102000628": {
       "seriesId": "km_s_98a2352d9",
       "mainVid": "98a2352d9",
@@ -376679,6 +377673,14 @@
       "poster": "https://wecima.onl/photos/uploads/1788202603_b013c558_MV5BOGI5MTU4YmQtZTQ4Yy00NjkzLWE2ODEtYWNjZTIxMWRkNTMyXkEyXkFqcGc-_V1_FMjpg_UX1200_-433x650.webp",
       "source": "wecima",
       "href": "https://wecima.onl/film/فيلم-penny-lane-is-dead-2025-مترجم-اون-لاين"
+    },
+    {
+      "id": "ak_m_11496",
+      "type": "movie",
+      "name": "Insidious: Out of the Further",
+      "poster": "https://img.downet.net/thumb/178x260/uploads/HGmWL.webp",
+      "source": "akwam",
+      "href": "https://akwam.ss/movie/11496/insidious-out-of-the-further"
     }
   ],
   "foreign_series": [],
