@@ -3139,6 +3139,22 @@
       "poster": "https://img.downet.net/thumb/178x260/uploads/HGmWL.webp",
       "source": "akwam",
       "href": "https://akwam.ss/movie/11496/insidious-out-of-the-further"
+    },
+    {
+      "id": "ak_m_11497",
+      "type": "movie",
+      "name": "Onslaught",
+      "poster": "https://img.downet.net/thumb/178x260/uploads/4QTA1.jpg",
+      "source": "akwam",
+      "href": "https://akwam.ss/movie/11497/onslaught"
+    },
+    {
+      "id": "ak_m_11392",
+      "type": "movie",
+      "name": "Fall 2: Deadpoint",
+      "poster": "https://img.downet.net/thumb/178x260/uploads/zZAf6.jpg",
+      "source": "akwam",
+      "href": "https://akwam.ss/movie/11392/fall-2-deadpoint"
     }
   ],
   "series": [
@@ -6389,6 +6405,14 @@
         "source": "akwam"
       }
     ],
+    "11392": [
+      {
+        "server": 1,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11392/fall-2-deadpoint",
+        "source": "akwam"
+      }
+    ],
     "11400": [
       {
         "server": 1,
@@ -7052,6 +7076,14 @@
         "server": 1,
         "label": "سيرفر أكوام (1080p MP4)",
         "embed": "https://akwam.ss/movie/11496/insidious-out-of-the-further",
+        "source": "akwam"
+      }
+    ],
+    "11497": [
+      {
+        "server": 1,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11497/onslaught",
         "source": "akwam"
       }
     ],
@@ -97474,6 +97506,14 @@
         "server": 2,
         "label": "سيرفر أكوام (1080p MP4)",
         "embed": "https://akwam.ss/movie/11408/reminders-of-him",
+        "source": "akwam"
+      }
+    ],
+    "ak_m_11496": [
+      {
+        "server": 2,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11496/insidious-out-of-the-further",
         "source": "akwam"
       }
     ]
@@ -377681,6 +377721,22 @@
       "poster": "https://img.downet.net/thumb/178x260/uploads/HGmWL.webp",
       "source": "akwam",
       "href": "https://akwam.ss/movie/11496/insidious-out-of-the-further"
+    },
+    {
+      "id": "ak_m_11497",
+      "type": "movie",
+      "name": "Onslaught",
+      "poster": "https://img.downet.net/thumb/178x260/uploads/4QTA1.jpg",
+      "source": "akwam",
+      "href": "https://akwam.ss/movie/11497/onslaught"
+    },
+    {
+      "id": "ak_m_11392",
+      "type": "movie",
+      "name": "Fall 2: Deadpoint",
+      "poster": "https://img.downet.net/thumb/178x260/uploads/zZAf6.jpg",
+      "source": "akwam",
+      "href": "https://akwam.ss/movie/11392/fall-2-deadpoint"
     }
   ],
   "foreign_series": [],
