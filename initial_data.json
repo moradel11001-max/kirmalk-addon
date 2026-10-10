@@ -3155,6 +3155,14 @@
       "poster": "https://img.downet.net/thumb/178x260/uploads/zZAf6.jpg",
       "source": "akwam",
       "href": "https://akwam.ss/movie/11392/fall-2-deadpoint"
+    },
+    {
+      "id": "ak_m_11498",
+      "type": "movie",
+      "name": "Matchbox the Movie",
+      "poster": "https://img.downet.net/thumb/178x260/uploads/gcz59.webp",
+      "source": "akwam",
+      "href": "https://akwam.ss/movie/11498/matchbox-the-movie"
     }
   ],
   "series": [
@@ -4763,6 +4771,13 @@
       "type": "series",
       "name": "احلى نصيب",
       "poster": "https://img.downet.net/thumb/178x260/uploads/ric4v.webp",
+      "source": "akwam"
+    },
+    {
+      "id": "ak_s_5829",
+      "type": "series",
+      "name": "طالع نازل",
+      "poster": "https://img.downet.net/thumb/178x260/uploads/2JGw9.webp",
       "source": "akwam"
     }
   ],
@@ -7084,6 +7099,14 @@
         "server": 1,
         "label": "سيرفر أكوام (1080p MP4)",
         "embed": "https://akwam.ss/movie/11497/onslaught",
+        "source": "akwam"
+      }
+    ],
+    "11498": [
+      {
+        "server": 1,
+        "label": "سيرفر أكوام (1080p MP4)",
+        "embed": "https://akwam.ss/movie/11498/matchbox-the-movie",
         "source": "akwam"
       }
     ],
@@ -26390,6 +26413,22 @@
         "server": 1,
         "label": "سيرفر أكوام (MP4)",
         "embed": "https://akwam.ss/episode/103142/سقف-الوالد-الموسم-الثاني/الحلقة-3",
+        "source": "akwam"
+      }
+    ],
+    "103275": [
+      {
+        "server": 1,
+        "label": "سيرفر أكوام (MP4)",
+        "embed": "https://akwam.ss/episode/103275/طالع-نازل/الحلقة-1",
+        "source": "akwam"
+      }
+    ],
+    "103276": [
+      {
+        "server": 1,
+        "label": "سيرفر أكوام (MP4)",
+        "embed": "https://akwam.ss/episode/103276/طالع-نازل/الحلقة-2",
         "source": "akwam"
       }
     ],
@@ -112634,6 +112673,22 @@
         "vid": "103142"
       }
     ],
+    "5829": [
+      {
+        "id": "ak_s_5829:1:1:103275",
+        "title": "الحلقة 1",
+        "season": 1,
+        "episode": 1,
+        "vid": "103275"
+      },
+      {
+        "id": "ak_s_5829:1:2:103276",
+        "title": "الحلقة 2",
+        "season": 1,
+        "episode": 2,
+        "vid": "103276"
+      }
+    ],
     "fca91da3b": [
       {
         "episode": 1,
@@ -172679,6 +172734,30 @@
           "season": 1,
           "episode": 3,
           "vid": "103142"
+        }
+      ]
+    },
+    "5829": {
+      "id": "ak_s_5829",
+      "type": "series",
+      "name": "طالع نازل",
+      "poster": "https://img.downet.net/thumb/178x260/uploads/2JGw9.webp",
+      "source": "akwam",
+      "href": "https://akwam.ss/series/5829/طالع-نازل",
+      "videos": [
+        {
+          "id": "ak_s_5829:1:1:103275",
+          "title": "الحلقة 1",
+          "season": 1,
+          "episode": 1,
+          "vid": "103275"
+        },
+        {
+          "id": "ak_s_5829:1:2:103276",
+          "title": "الحلقة 2",
+          "season": 1,
+          "episode": 2,
+          "vid": "103276"
         }
       ]
     },
@@ -331608,6 +331687,30 @@
           "vid": "103139"
         }
       ]
+    },
+    "ak_s_5829": {
+      "id": "ak_s_5829",
+      "type": "series",
+      "name": "طالع نازل",
+      "poster": "https://img.downet.net/thumb/178x260/uploads/2JGw9.webp",
+      "source": "akwam",
+      "href": "https://akwam.ss/series/5829/طالع-نازل",
+      "videos": [
+        {
+          "id": "ak_s_5829:1:1:103275",
+          "title": "الحلقة 1",
+          "season": 1,
+          "episode": 1,
+          "vid": "103275"
+        },
+        {
+          "id": "ak_s_5829:1:2:103276",
+          "title": "الحلقة 2",
+          "season": 1,
+          "episode": 2,
+          "vid": "103276"
+        }
+      ]
     }
   },
   "epToSeries": {
@@ -333740,6 +333843,8 @@
     "103140": "ak_s_5814",
     "103141": "ak_s_5814",
     "103142": "ak_s_5814",
+    "103275": "ak_s_5829",
+    "103276": "ak_s_5829",
     "102000628": {
       "seriesId": "km_s_98a2352d9",
       "mainVid": "98a2352d9",
@@ -377753,6 +377858,14 @@
       "poster": "https://img.downet.net/thumb/178x260/uploads/zZAf6.jpg",
       "source": "akwam",
       "href": "https://akwam.ss/movie/11392/fall-2-deadpoint"
+    },
+    {
+      "id": "ak_m_11498",
+      "type": "movie",
+      "name": "Matchbox the Movie",
+      "poster": "https://img.downet.net/thumb/178x260/uploads/gcz59.webp",
+      "source": "akwam",
+      "href": "https://akwam.ss/movie/11498/matchbox-the-movie"
     }
   ],
   "foreign_series": [],
