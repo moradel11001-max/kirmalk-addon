@@ -80,6 +80,56 @@ async function scrapeKirmalkSeries(maxPages = 3) {
 }
 
 /**
+ * Scrape series from a specific Kirmalk category slug (e.g. serieseg4, seriessy5, series5l, turk14, rmadan27)
+ */
+async function scrapeKirmalkCategory(slug, maxPages = 10, categoryName = 'series') {
+  const seriesMap = new Map();
+
+  for (let page = 1; page <= maxPages; page++) {
+    const url = `/category.php?cat=${slug}${page > 1 ? `&page=${page}` : ''}`;
+    try {
+      const res = await http.get(url);
+      const $ = cheerio.load(res.data);
+
+      $('.video-card').each((_, el) => {
+        const titleLink = $(el).find('.video-title a');
+        const cardLink = $(el).find('a.video-link, a[href*="watch.php?vid="]').first();
+        const rawTitle = titleLink.text().replace(/\s+/g, ' ').trim() || cardLink.attr('title') || '';
+        const href = cardLink.attr('href') || titleLink.attr('href');
+        const img = $(el).find('img.thumbnail-image, img').attr('src') || $(el).find('img').attr('data-src');
+
+        const m = href ? href.match(/vid=([a-z0-9]+)/i) : null;
+        if (m && rawTitle) {
+          const vid = m[1];
+          const cleanName = cleanSeriesName(rawTitle);
+          if (!cleanName) return;
+
+          if (!seriesMap.has(cleanName)) {
+            const seriesId = `km_s_${vid}`;
+            seriesMap.set(cleanName, {
+              id: seriesId,
+              rawId: vid,
+              name: 'مسلسل ' + cleanName,
+              cleanName,
+              href: href.startsWith('http') ? href : `${BASE_URL}${href}`,
+              sampleVid: vid,
+              poster: img || null,
+              source: 'kirmalk',
+              type: 'series',
+              category: categoryName
+            });
+          }
+        }
+      });
+    } catch (err) {
+      console.warn(`[Kirmalk] Failed scraping cat ${slug} page ${page}: ${err.message}`);
+    }
+  }
+
+  return Array.from(seriesMap.values());
+}
+
+/**
  * Scrape movies from Kirmalk via movies.php
  */
 async function scrapeKirmalkMovies(maxPages = 3) {
@@ -197,6 +247,7 @@ async function extractKirmalkServers(vid) {
 
 module.exports = {
   scrapeKirmalkSeries,
+  scrapeKirmalkCategory,
   scrapeKirmalkMovies,
   getKirmalkSeriesEpisodes,
   extractKirmalkServers,
