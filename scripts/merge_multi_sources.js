@@ -50,13 +50,54 @@ async function runMerger() {
 
   console.log(`Starting with: ${data.movies.length} movies, ${data.series.length} unified series.`);
 
+  // Clean up any truncated percent-encoded WeCima IDs in existing arrays
+  const sanitizeItem = (item) => {
+    if (item.source === 'wecima' && item.href) {
+      const m = item.href.match(/\/(?:film|series)\/([^/?#]+)/);
+      if (m) {
+        let slug = m[1];
+        try { slug = decodeURIComponent(slug); } catch (_) {}
+        const prefix = item.type === 'series' ? 'wc_s_' : 'wc_m_';
+        item.id = `${prefix}${slug}`;
+        item.rawId = slug;
+      }
+    }
+    return item;
+  };
+
+  data.movies = data.movies.map(sanitizeItem);
+  data.series = data.series.map(sanitizeItem);
+  data.foreign_movies = data.foreign_movies.map(sanitizeItem);
+  data.foreign_series = data.foreign_series.map(sanitizeItem);
+  data.turkish = data.turkish.map(sanitizeItem);
+  data.dubbed_series = data.dubbed_series.map(sanitizeItem);
+
+  // Ensure all WeCima movies have server entries indexed under their clean id and href
+  for (const m of data.movies) {
+    if (m.source === 'wecima' && m.href) {
+      const srvObj = [{
+        server: 1,
+        label: 'سيرفر وي سيما (HD HLS)',
+        embed: m.href,
+        source: 'wecima'
+      }];
+      data.servers[m.id] = srvObj;
+      data.servers[m.rawId] = srvObj;
+      data.servers[m.href] = srvObj;
+      try {
+        data.servers[decodeURIComponent(m.rawId)] = srvObj;
+        data.servers[encodeURIComponent(m.rawId)] = srvObj;
+      } catch (_) {}
+    }
+  }
+
   // Create lookup map of existing movies by normalized title
   const existingMovies = [];
   for (const m of data.movies) {
     existingMovies.push({
       item: m,
       norm: normalizeArabicTitle(m.name),
-      vid: m.id.replace(/^km_m_/, '')
+      vid: m.id.replace(/^km_m_/, '').replace(/^wc_m_/, '').replace(/^ak_m_/, '')
     });
   }
 
@@ -66,7 +107,7 @@ async function runMerger() {
     existingSeries.push({
       item: s,
       norm: normalizeArabicTitle(s.name),
-      vid: s.id.replace(/^km_s_/, '')
+      vid: s.id.replace(/^km_s_/, '').replace(/^wc_s_/, '').replace(/^ak_s_/, '')
     });
   }
 
@@ -106,17 +147,17 @@ async function runMerger() {
   console.log('Fetching Akwam Foreign Movies...');
   const akwamForeignMovies = await scrapeAkwamMovies(30, 2);
 
-  // Akwam Arabic Series (Section 29)
-  console.log('Fetching Akwam Arabic Series...');
-  const akwamArabicSeries = await scrapeAkwamSeries(29, null, 2);
+  // Akwam General & Foreign Series (Page 1 & 2)
+  console.log('Fetching Akwam General & Foreign Series...');
+  const akwamGeneralSeries = await scrapeAkwamSeries(null, null, 2);
   // Akwam Turkish Series (Section 32)
   console.log('Fetching Akwam Turkish Series...');
-  const akwamTurkishSeries = await scrapeAkwamSeries(32, null, 2);
+  const akwamTurkishSeries = await scrapeAkwamSeries(32, null, 1);
   // Akwam Ramadan Series (Section 0, Category 87)
   console.log('Fetching Akwam Ramadan Series...');
   const akwamRamadanSeries = await scrapeAkwamSeries(0, 87, 1);
 
-  console.log(`Akwam scraped: ${akwamArabicMovies.length + akwamForeignMovies.length} movies, ${akwamArabicSeries.length + akwamTurkishSeries.length + akwamRamadanSeries.length} series.`);
+  console.log(`Akwam scraped: ${akwamArabicMovies.length + akwamForeignMovies.length} movies, ${akwamGeneralSeries.length + akwamTurkishSeries.length + akwamRamadanSeries.length} series.`);
 
   // Merge Akwam Movies
   let akwamMoviesMatched = 0;
@@ -171,7 +212,7 @@ async function runMerger() {
   let akwamSeriesMatched = 0;
   let akwamSeriesAdded = 0;
 
-  const allAkwamSeries = [...akwamArabicSeries, ...akwamTurkishSeries, ...akwamRamadanSeries];
+  const allAkwamSeries = [...akwamGeneralSeries, ...akwamTurkishSeries, ...akwamRamadanSeries];
   for (const aks of allAkwamSeries) {
     const match = findSeriesMatch(aks.name);
     if (match) {
@@ -209,16 +250,19 @@ async function runMerger() {
           title: `الحلقة ${e.episode}`,
           season: 1,
           episode: e.episode,
-          vid: e.id
+          vid: e.id,
+          href: e.href
         }));
 
         for (const e of eps) {
-          data.servers[e.id] = [{
+          const srvObj = [{
             server: 1,
             label: 'سيرفر أكوام (MP4)',
             embed: e.href,
             source: 'akwam'
           }];
+          data.servers[e.id] = srvObj;
+          data.servers[e.href] = srvObj;
           data.epToSeries[e.id] = seriesId;
         }
 
@@ -249,10 +293,18 @@ async function runMerger() {
           existingSeries.push({ item: catalogItem, norm: normalizeArabicTitle(aks.name), vid: aks.rawId });
         }
 
-        if (aks.section === 32 && !data.turkish.some(s => s.id === seriesId)) {
+        const isForeignSeries = aks.section === 30 || /[a-zA-Z]{3,}/.test(aks.name);
+        const isTurkishSeries = aks.section === 32 || /تركي/i.test(aks.name);
+        const isDubbedSeries = /مدبلج/i.test(aks.name);
+
+        if (isTurkishSeries && !data.turkish.some(s => s.id === seriesId)) {
           data.turkish.push(catalogItem);
         } else if (aks.category === 87 && !data.ramadan.some(s => s.id === seriesId)) {
           data.ramadan.push(catalogItem);
+        } else if (isDubbedSeries && !data.dubbed_series.some(s => s.id === seriesId)) {
+          data.dubbed_series.push(catalogItem);
+        } else if (isForeignSeries && !data.foreign_series.some(s => s.id === seriesId)) {
+          data.foreign_series.push(catalogItem);
         }
       } catch (err) {
         console.warn(`Failed adding Akwam series ${aks.name}: ${err.message}`);
@@ -285,8 +337,11 @@ async function runMerger() {
   // WeCima Dubbed Series
   console.log('Fetching WeCima Dubbed Series...');
   const wecimaDubbedSeries = await scrapeWeCimaSeries('مسلسلات-مدبلجة', 2);
+  // WeCima Foreign Series
+  console.log('Fetching WeCima Foreign Series...');
+  const wecimaForeignSeries = await scrapeWeCimaSeries('مسلسلات-اجنبي', 2);
 
-  console.log(`WeCima scraped: ${wecimaArabicMovies.length + wecimaForeignMovies.length + wecimaTurkishMovies.length} movies, ${wecimaArabicSeries.length + wecimaTurkishSeries.length + wecimaDubbedSeries.length} series.`);
+  console.log(`WeCima scraped: ${wecimaArabicMovies.length + wecimaForeignMovies.length + wecimaTurkishMovies.length} movies, ${wecimaArabicSeries.length + wecimaTurkishSeries.length + wecimaDubbedSeries.length + wecimaForeignSeries.length} series.`);
 
   // Merge WeCima Movies
   let wecimaMoviesMatched = 0;
@@ -337,6 +392,11 @@ async function runMerger() {
       }];
       data.servers[wcm.id] = srvObj;
       data.servers[wcm.rawId] = srvObj;
+      data.servers[wcm.href] = srvObj;
+      try {
+        data.servers[decodeURIComponent(wcm.rawId)] = srvObj;
+        data.servers[encodeURIComponent(wcm.rawId)] = srvObj;
+      } catch (_) {}
     }
   }
   console.log(`WeCima Movies: ${wecimaMoviesMatched} linked as backup servers, ${wecimaMoviesAdded} new titles added.`);
@@ -345,7 +405,7 @@ async function runMerger() {
   let wecimaSeriesMatched = 0;
   let wecimaSeriesAdded = 0;
 
-  const allWeCimaSeries = [...wecimaArabicSeries, ...wecimaTurkishSeries, ...wecimaDubbedSeries];
+  const allWeCimaSeries = [...wecimaArabicSeries, ...wecimaTurkishSeries, ...wecimaDubbedSeries, ...wecimaForeignSeries];
   for (const wcs of allWeCimaSeries) {
     const match = findSeriesMatch(wcs.name);
     if (match) {
@@ -379,12 +439,15 @@ async function runMerger() {
         const seriesId = wcs.id;
         const videos = eps.map(e => {
           const epSlug = e.href.split('/').filter(Boolean).pop();
+          let cleanEpSlug = epSlug;
+          try { cleanEpSlug = decodeURIComponent(epSlug); } catch (_) {}
           return {
-            id: `${seriesId}:1:${e.episode}:${epSlug}`,
+            id: `${seriesId}:1:${e.episode}:${cleanEpSlug}`,
             title: `الحلقة ${e.episode}`,
             season: 1,
             episode: e.episode,
-            vid: epSlug
+            vid: cleanEpSlug,
+            href: e.href
           };
         });
 
@@ -399,6 +462,12 @@ async function runMerger() {
           }];
           data.servers[v.vid] = srvObj;
           data.servers[e.href] = srvObj;
+          const rawSlug = e.href.split('/').filter(Boolean).pop();
+          data.servers[rawSlug] = srvObj;
+          try {
+            data.servers[decodeURIComponent(rawSlug)] = srvObj;
+            data.servers[encodeURIComponent(v.vid)] = srvObj;
+          } catch (_) {}
           data.epToSeries[v.vid] = seriesId;
         }
 
@@ -414,6 +483,9 @@ async function runMerger() {
 
         data.unifiedSeries[wcs.rawId] = seriesMetaObj;
         data.unifiedSeries[seriesId] = seriesMetaObj;
+        try {
+          data.unifiedSeries[encodeURIComponent(wcs.rawId)] = seriesMetaObj;
+        } catch (_) {}
         data.seriesMeta[wcs.rawId] = videos;
 
         const catalogItem = {
@@ -433,6 +505,8 @@ async function runMerger() {
           data.turkish.push(catalogItem);
         } else if (wcs.category === 'مسلسلات-مدبلجة' && !data.dubbed_series.some(s => s.id === seriesId)) {
           data.dubbed_series.push(catalogItem);
+        } else if (wcs.category === 'مسلسلات-اجنبي' && !data.foreign_series.some(s => s.id === seriesId)) {
+          data.foreign_series.push(catalogItem);
         }
       } catch (err) {
         console.warn(`Failed adding WeCima series ${wcs.name}: ${err.message}`);
@@ -449,6 +523,7 @@ async function runMerger() {
   console.log(`Total Series: ${data.series.length}`);
   console.log(`Total Turkish Series: ${data.turkish.length}`);
   console.log(`Total Foreign Movies: ${data.foreign_movies.length}`);
+  console.log(`Total Foreign Series: ${data.foreign_series.length}`);
   console.log(`Total Dubbed Series: ${data.dubbed_series.length}`);
   console.log(`Total Cached Server Keys: ${Object.keys(data.servers).length}`);
 

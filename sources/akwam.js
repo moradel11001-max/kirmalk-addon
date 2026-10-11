@@ -66,12 +66,16 @@ async function scrapeAkwamMovies(section = 29, maxPages = 2) {
  * Scrape series from Akwam by section
  * section 29 = مسلسلات عربية, 32 = تركية, 30 = أجنبية, section=0&category=87 = رمضان
  */
-async function scrapeAkwamSeries(section = 29, category = null, maxPages = 2) {
+async function scrapeAkwamSeries(section = null, category = null, maxPages = 2) {
   const seriesList = [];
   for (let page = 1; page <= maxPages; page++) {
-    let url = `/series?section=${section}&page=${page}`;
-    if (category) {
+    let url = `/series${page > 1 ? `?page=${page}` : ''}`;
+    if (section && category) {
       url = `/series?section=${section}&category=${category}&page=${page}`;
+    } else if (section) {
+      url = `/series?section=${section}&page=${page}`;
+    } else if (category) {
+      url = `/series?category=${category}&page=${page}`;
     }
     try {
       const res = await http.get(url);

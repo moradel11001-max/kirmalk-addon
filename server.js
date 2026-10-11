@@ -1,7 +1,10 @@
 const express = require('express');
 const os = require('os');
+const https = require('https');
 const axios = require('axios');
 const { manifest, getCatalog, getMeta, getStreamsFor } = require('./scraper');
+
+const agent = new https.Agent({ rejectUnauthorized: false });
 
 const app = express();
 const PORT = process.env.PORT || 7860;
@@ -229,6 +232,7 @@ app.get('/proxy/image.jpg', async (req, res) => {
         'User-Agent': 'okhttp/4.9.3',
         'Referer': referer
       },
+      httpsAgent: agent,
       responseType: 'arraybuffer',
       timeout: 10000
     });
@@ -272,12 +276,20 @@ app.get([
 
     const isM3U8Route = req.path.includes('.m3u8') || targetUrl.includes('.m3u8');
 
+    // 1. Direct redirect for MP4 video files to eliminate Vercel 10s timeouts & 502 errors!
+    if (req.path.includes('.mp4') || targetUrl.includes('.mp4')) {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Private-Network', 'true');
+      return res.redirect(targetUrl);
+    }
+
     if (!isM3U8Route) {
-      // Stream binary media (MP4 videos, TS chunks, encryption keys) directly via pipe
+      // Stream binary TS chunks directly via pipe with relaxed SSL
       const response = await axios({
         method: 'get',
         url: targetUrl,
         headers,
+        httpsAgent: agent,
         responseType: 'stream',
         validateStatus: () => true,
         timeout: 20000
@@ -295,9 +307,7 @@ app.get([
       res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
       res.setHeader('Access-Control-Allow-Private-Network', 'true');
 
-      if (req.path.includes('.mp4') || targetUrl.includes('.mp4')) {
-        res.setHeader('Content-Type', 'video/mp4');
-      } else if (req.path.includes('.ts') || targetUrl.includes('.ts')) {
+      if (req.path.includes('.ts') || targetUrl.includes('.ts')) {
         res.setHeader('Content-Type', 'video/mp2t');
       }
 
@@ -309,6 +319,7 @@ app.get([
       method: 'get',
       url: targetUrl,
       headers,
+      httpsAgent: agent,
       responseType: 'arraybuffer',
       validateStatus: () => true,
       timeout: 10000

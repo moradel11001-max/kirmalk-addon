@@ -1,0 +1,41 @@
+name: Daily Multi-Source Catalog Sync
+
+on:
+  schedule:
+    # Runs everyday at 04:00 UTC (07:00 AM Riyadh / Cairo time)
+    - cron: '0 4 * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run Multi-Source Catalog Merger
+        run: node scripts/merge_multi_sources.js
+
+      - name: Commit and Push Updated Catalog
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add initial_data.json
+          if git diff --staged --quiet; then
+            echo "No updates to commit."
+          else
+            git commit -m "chore(catalog): automated daily sync of movies and series"
+            git push origin main
+          fi

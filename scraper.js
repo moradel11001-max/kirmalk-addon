@@ -156,6 +156,7 @@ function getFallbackMetas(type, genre, search) {
     ...(initialData.syrian || []),
     ...(initialData.gulf || []),
     ...(initialData.ramadan || []),
+    ...(initialData.foreign_series || []),
     ...(initialData.dubbed_series || [])
   ];
   const seen = new Set();
@@ -384,6 +385,8 @@ async function getCatalog(type, extra = {}, hostUrl = '') {
       } else if (type === 'movie') {
         if (genre === 'مسرحيات') {
           metas = await scrapeSearch('مسرحية', page);
+        } else if (genre === 'أفلام أجنبي' || genre === 'أفلام تركية') {
+          metas = getFallbackMetas(type, genre, search).slice(skip, skip + 50);
         } else {
           metas = await scrapeMovies(page);
         }
@@ -399,6 +402,8 @@ async function getCatalog(type, extra = {}, hostUrl = '') {
           metas = await scrapeCategory('series5l', page, 'series');
         } else if (genre === 'مسلسلات رمضان') {
           metas = await scrapeCategory('rmadan27', page, 'series');
+        } else if (genre === 'مسلسلات أجنبية' || genre === 'مسلسلات مدبلجة') {
+          metas = getFallbackMetas(type, genre, search).slice(skip, skip + 50);
         } else {
           metas = await scrapeSeries(page);
         }
@@ -438,8 +443,14 @@ async function getMeta(type, id, hostUrl = '') {
     const cleanVid = cleanId(id);
 
     // 1. Check bundled unifiedSeries first!
-    if (type === 'series' || id.startsWith('km_s_')) {
-      const unified = (initialData.unifiedSeries && (initialData.unifiedSeries[id] || initialData.unifiedSeries[cleanVid])) || null;
+    if (type === 'series' || id.startsWith('km_s_') || id.startsWith('wc_s_') || id.startsWith('ak_s_')) {
+      const unified = (initialData.unifiedSeries && (
+        initialData.unifiedSeries[id] ||
+        initialData.unifiedSeries[cleanVid] ||
+        initialData.unifiedSeries[`wc_s_${cleanVid}`] ||
+        initialData.unifiedSeries[`ak_s_${cleanVid}`] ||
+        initialData.unifiedSeries[`km_s_${cleanVid}`]
+      )) || null;
       if (unified) {
         meta = {
           ...unified,
@@ -456,8 +467,13 @@ async function getMeta(type, id, hostUrl = '') {
     }
 
     // 2. Check bundled movies & plays
-    if (type === 'movie' || id.startsWith('km_m_')) {
-      const foundMovie = [...(initialData.movies || []), ...(initialData.plays || [])].find(m => m.id === id || cleanId(m.id) === cleanVid);
+    if (type === 'movie' || id.startsWith('km_m_') || id.startsWith('wc_m_') || id.startsWith('ak_m_')) {
+      const allMovies = [
+        ...(initialData.movies || []),
+        ...(initialData.foreign_movies || []),
+        ...(initialData.plays || [])
+      ];
+      const foundMovie = allMovies.find(m => m.id === id || cleanId(m.id) === cleanVid || m.rawId === cleanVid);
       if (foundMovie) {
         meta = {
           id: foundMovie.id,
@@ -749,14 +765,33 @@ async function getStreamsFor(baseId, season, episode, hostUrl = '') {
 
   let { servers } = await scrapeWatchServers(targetVid);
 
-  // Fallback: check if baseId matches a movie directly in initialData.movies
+  // Fallback for movies: check if baseId matches a movie directly in initialData.movies
   if ((!servers || servers.length === 0) && initialData.movies) {
-    const movie = initialData.movies.find(m => m.id === baseId || cleanId(m.id) === targetVid);
+    const movie = initialData.movies.find(m => m.id === baseId || cleanId(m.id) === targetVid || m.rawId === targetVid);
     if (movie && movie.href) {
       if (movie.source === 'wecima') {
         servers = [{ server: 1, label: 'سيرفر وي سيما (HD HLS)', embed: movie.href, source: 'wecima' }];
       } else if (movie.source === 'akwam') {
         servers = [{ server: 1, label: 'سيرفر أكوام (1080p MP4)', embed: movie.href, source: 'akwam' }];
+      }
+    }
+  }
+
+  // Fallback for series episodes: check if episode is inside unifiedSeries
+  if ((!servers || servers.length === 0) && initialData.unifiedSeries) {
+    for (const [sKey, sObj] of Object.entries(initialData.unifiedSeries)) {
+      if (sObj && sObj.videos) {
+        const ep = sObj.videos.find(v => v.id === baseId || v.vid === targetVid || cleanId(v.id) === targetVid);
+        if (ep && (ep.href || sObj.href)) {
+          const embedUrl = ep.href || sObj.href;
+          if (sObj.source === 'akwam' || embedUrl.includes('akwam')) {
+            servers = [{ server: 1, label: 'سيرفر أكوام (MP4)', embed: embedUrl, source: 'akwam' }];
+            break;
+          } else if (sObj.source === 'wecima' || embedUrl.includes('wecima')) {
+            servers = [{ server: 1, label: 'سيرفر وي سيما (HD HLS)', embed: embedUrl, source: 'wecima' }];
+            break;
+          }
+        }
       }
     }
   }
@@ -790,10 +825,15 @@ async function getStreamsFor(baseId, season, episode, hostUrl = '') {
         return resolved.map(r => {
           const referer = r.referer || s.embed;
           const isHls = r.url.includes('.m3u8') || (r.title && r.title.includes('HLS'));
-          const endpoint = isHls ? '/proxy/stream.m3u8' : '/proxy/video.mp4';
-          const streamUrl = hostUrl
-            ? `${hostUrl}${endpoint}?url=${encodeURIComponent(r.url)}&referer=${encodeURIComponent(referer)}`
-            : r.url;
+          let streamUrl;
+          if (isHls) {
+            streamUrl = hostUrl
+              ? `${hostUrl}/proxy/stream.m3u8?url=${encodeURIComponent(r.url)}&referer=${encodeURIComponent(referer)}`
+              : r.url;
+          } else {
+            // Direct MP4 link for instant playback without Vercel proxy timeouts!
+            streamUrl = r.url;
+          }
 
           let sourceName = 'كرمالك';
           if (sSource === 'akwam') sourceName = 'أكوام';

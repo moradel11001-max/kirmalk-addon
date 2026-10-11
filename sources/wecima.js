@@ -12,6 +12,15 @@ const headers = {
   'Referer': BASE_URL
 };
 
+function safeUrl(u) {
+  if (!u) return '';
+  try {
+    return encodeURI(decodeURI(u));
+  } catch (_) {
+    return u;
+  }
+}
+
 /**
  * Scrape movies from WeCima by category
  * Categories: 'افلام-عربي', 'افلام-اجنبي', 'افلام-تركية'
@@ -38,7 +47,8 @@ async function scrapeWeCimaMovies(category = 'افلام-عربي', maxPages = 2
 
         const m = href ? href.match(/\/film\/([^/?#]+)/) : null;
         if (m && title && !movies.some(x => x.href === href)) {
-          const slug = m[1];
+          let slug = m[1];
+          try { slug = decodeURIComponent(slug); } catch (_) {}
           movies.push({
             id: `wc_m_${slug}`,
             rawId: slug,
@@ -89,11 +99,12 @@ async function scrapeWeCimaSeries(category = 'مسلسلات-عربي', maxPages
         const img = $(el).find('img').attr('data-src') || $(el).find('img').attr('src') || $(el).find('span.BG').attr('data-bg');
 
         // Extract series slug from episode url or title
-        // e.g., /episode/مسلسل-سندس-3-الحلقة-22 -> مسلسل-سندس
         let seriesSlug = cleanTitle.replace(/\s+/g, '-');
         if (href && href.includes('/series/')) {
           const sm = href.match(/\/series\/([^/?#]+)/);
-          if (sm) seriesSlug = sm[1];
+          if (sm) {
+            try { seriesSlug = decodeURIComponent(sm[1]); } catch (_) { seriesSlug = sm[1]; }
+          }
         }
 
         if (cleanTitle && !seriesMap.has(seriesSlug)) {
@@ -128,10 +139,13 @@ async function getWeCimaSeriesEpisodes(seriesUrl, sampleEpUrl = null) {
 
   async function parseEpList(pageUrl) {
     try {
-      const res = await axios.get(encodeURI(pageUrl), { headers, httpsAgent: agent, timeout: 8000 });
+      const res = await axios.get(safeUrl(pageUrl), { headers, httpsAgent: agent, timeout: 8000 });
       const $ = cheerio.load(res.data);
 
       $('a[href*="/episode/"]').each((idx, el) => {
+        // Skip recommendation sliders and related carousels
+        if ($(el).closest('.glide_post, .slider, .owl-carousel, .related').length > 0) return;
+
         const epHref = $(el).attr('href');
         const epText = $(el).text().replace(/\s+/g, ' ').trim();
         if (epHref && !epUrlsSeen.has(epHref)) {
@@ -191,7 +205,7 @@ async function resolveWeCimaStreams(pageUrl) {
 
     // If it's a film or episode page, find watch page
     if (!pageUrl.includes('/watch/')) {
-      const pageRes = await axios.get(encodeURI(pageUrl), { headers, httpsAgent: agent, timeout: 8000 });
+      const pageRes = await axios.get(safeUrl(pageUrl), { headers, httpsAgent: agent, timeout: 8000 });
       const $ = cheerio.load(pageRes.data);
       const wLink = $('a[href*="/watch/"]').first().attr('href');
       if (wLink) {
@@ -203,7 +217,7 @@ async function resolveWeCimaStreams(pageUrl) {
     }
 
     // Fetch watch page to obtain session cookies and server list
-    const watchRes = await axios.get(encodeURI(watchUrl), { headers, httpsAgent: agent, timeout: 8000 });
+    const watchRes = await axios.get(safeUrl(watchUrl), { headers, httpsAgent: agent, timeout: 8000 });
     const setCookie = watchRes.headers['set-cookie'];
     if (setCookie) {
       cookieHeader = setCookie.map(c => c.split(';')[0]).join('; ');
