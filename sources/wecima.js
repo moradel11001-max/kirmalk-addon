@@ -3,11 +3,17 @@ const cheerio = require('cheerio');
 const https = require('https');
 const { extractMediaUrls } = require('../resolver');
 
-const BASE_URL = 'https://wecima.onl';
+const MIRRORS = [
+  'https://wecima.onl',
+  'https://wemycima.fit',
+  'https://mywecima.lat',
+  'https://wecima.tattoo'
+];
+let BASE_URL = MIRRORS[0];
 const agent = new https.Agent({ rejectUnauthorized: false });
 
 const headers = {
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
   'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
   'Referer': BASE_URL
 };
@@ -21,6 +27,32 @@ function safeUrl(u) {
   }
 }
 
+async function fetchWeCima(urlPath) {
+  let targetUrl = urlPath;
+  if (!targetUrl.startsWith('http')) {
+    targetUrl = `${BASE_URL}${targetUrl.startsWith('/') ? '' : '/'}${targetUrl}`;
+  }
+
+  // 1. Try current BASE_URL
+  try {
+    const res = await axios.get(safeUrl(targetUrl), { headers: { ...headers, Referer: `${BASE_URL}/` }, httpsAgent: agent, timeout: 8000 });
+    return res;
+  } catch (err) {
+    // 2. Try alternate mirrors if 403 or failed
+    for (const mirror of MIRRORS) {
+      if (mirror === BASE_URL) continue;
+      const altUrl = targetUrl.replace(BASE_URL, mirror);
+      try {
+        const altHeaders = { ...headers, Referer: `${mirror}/` };
+        const res = await axios.get(safeUrl(altUrl), { headers: altHeaders, httpsAgent: agent, timeout: 8000 });
+        BASE_URL = mirror; // Switch active base URL
+        return res;
+      } catch (_) {}
+    }
+    throw err;
+  }
+}
+
 /**
  * Scrape movies from WeCima by category
  * Categories: 'افلام-عربي', 'افلام-اجنبي', 'افلام-تركية'
@@ -28,9 +60,9 @@ function safeUrl(u) {
 async function scrapeWeCimaMovies(category = 'افلام-عربي', maxPages = 2) {
   const movies = [];
   for (let page = 1; page <= maxPages; page++) {
-    const url = `${BASE_URL}/category/${encodeURIComponent(category)}${page > 1 ? `?page=${page}` : ''}`;
+    const url = `/category/${encodeURIComponent(category)}${page > 1 ? `?page=${page}` : ''}`;
     try {
-      const res = await axios.get(url, { headers, httpsAgent: agent, timeout: 8000 });
+      const res = await fetchWeCima(url);
       const $ = cheerio.load(res.data);
 
       $('div[class*="col"]').each((_, el) => {
@@ -76,9 +108,9 @@ async function scrapeWeCimaSeries(category = 'مسلسلات-عربي', maxPages
   const seriesMap = new Map();
 
   for (let page = 1; page <= maxPages; page++) {
-    const url = `${BASE_URL}/category/${encodeURIComponent(category)}${page > 1 ? `?page=${page}` : ''}`;
+    const url = `/category/${encodeURIComponent(category)}${page > 1 ? `?page=${page}` : ''}`;
     try {
-      const res = await axios.get(url, { headers, httpsAgent: agent, timeout: 8000 });
+      const res = await fetchWeCima(url);
       const $ = cheerio.load(res.data);
 
       $('div[class*="col"]').each((_, el) => {
@@ -139,7 +171,7 @@ async function getWeCimaSeriesEpisodes(seriesUrl, sampleEpUrl = null) {
 
   async function parseEpList(pageUrl) {
     try {
-      const res = await axios.get(safeUrl(pageUrl), { headers, httpsAgent: agent, timeout: 8000 });
+      const res = await fetchWeCima(pageUrl);
       const $ = cheerio.load(res.data);
 
       $('a[href*="/episode/"]').each((idx, el) => {
@@ -205,7 +237,7 @@ async function resolveWeCimaStreams(pageUrl) {
 
     // If it's a film or episode page, find watch page
     if (!pageUrl.includes('/watch/')) {
-      const pageRes = await axios.get(safeUrl(pageUrl), { headers, httpsAgent: agent, timeout: 8000 });
+      const pageRes = await fetchWeCima(pageUrl);
       const $ = cheerio.load(pageRes.data);
       const wLink = $('a[href*="/watch/"]').first().attr('href');
       if (wLink) {
@@ -217,7 +249,7 @@ async function resolveWeCimaStreams(pageUrl) {
     }
 
     // Fetch watch page to obtain session cookies and server list
-    const watchRes = await axios.get(safeUrl(watchUrl), { headers, httpsAgent: agent, timeout: 8000 });
+    const watchRes = await fetchWeCima(watchUrl);
     const setCookie = watchRes.headers['set-cookie'];
     if (setCookie) {
       cookieHeader = setCookie.map(c => c.split(';')[0]).join('; ');
