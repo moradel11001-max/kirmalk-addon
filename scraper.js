@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const https = require('https');
 const axios = require('axios');
 const cheerio = require('cheerio');
 const { resolveEmbed } = require('./resolver');
@@ -8,6 +9,7 @@ const { resolveWeCimaStreams } = require('./sources/wecima');
 
 const BASE = 'https://kirmalk.com';
 const CACHE_FILE = path.join(__dirname, 'cache.json');
+const agent = new https.Agent({ rejectUnauthorized: false });
 
 // ---------- HTTP Client ----------
 const http = axios.create({
@@ -16,6 +18,7 @@ const http = axios.create({
     'Accept-Language': 'ar,en;q=0.8',
     'Referer': BASE
   },
+  httpsAgent: agent,
   timeout: 8000,
   maxRedirects: 5
 });
@@ -347,6 +350,19 @@ async function getCatalog(type, extra = {}, hostUrl = '') {
     genre = null;
   }
 
+  // For search: ALWAYS check purified consolidated catalog first for unified cards
+  if (search) {
+    const localMatches = getFallbackMetas(type, genre, search);
+    if (localMatches.length > 0) {
+      const paged = localMatches.slice(skip, skip + 50);
+      const metas = (paged.length > 0 ? paged : (skip === 0 ? localMatches.slice(0, 50) : [])).map(m => ({
+        ...m,
+        poster: formatPoster(m.poster, hostUrl)
+      }));
+      return { metas };
+    }
+  }
+
   // For series without search: ALWAYS serve from consolidated unified catalog for clean cards & instant response
   if (type === 'series' && !search) {
     const fallbackList = getFallbackMetas('series', genre, null);
@@ -627,15 +643,26 @@ async function scrapeWatchServers(vid) {
   try { decodedVid = decodeURIComponent(cleanVid); } catch (_) {}
   let encodedVid = encodeURIComponent(decodedVid);
 
-  // 1. Check bundled servers cache first!
+  // 1. Check bundled servers cache first (filtering out fake watch.php embeds)!
   if (initialData.servers) {
-    if (initialData.servers[cleanVid]?.length) return { servers: initialData.servers[cleanVid] };
-    if (initialData.servers[decodedVid]?.length) return { servers: initialData.servers[decodedVid] };
-    if (initialData.servers[encodedVid]?.length) return { servers: initialData.servers[encodedVid] };
-    if (initialData.servers[`wc_m_${decodedVid}`]?.length) return { servers: initialData.servers[`wc_m_${decodedVid}`] };
-    if (initialData.servers[`wc_s_${decodedVid}`]?.length) return { servers: initialData.servers[`wc_s_${decodedVid}`] };
-    if (initialData.servers[`ak_m_${decodedVid}`]?.length) return { servers: initialData.servers[`ak_m_${decodedVid}`] };
-    if (initialData.servers[`ak_s_${decodedVid}`]?.length) return { servers: initialData.servers[`ak_s_${decodedVid}`] };
+    const cachedList = [
+      initialData.servers[cleanVid],
+      initialData.servers[decodedVid],
+      initialData.servers[encodedVid],
+      initialData.servers[`wc_m_${decodedVid}`],
+      initialData.servers[`wc_s_${decodedVid}`],
+      initialData.servers[`ak_m_${decodedVid}`],
+      initialData.servers[`ak_s_${decodedVid}`]
+    ];
+
+    for (const cached of cachedList) {
+      if (Array.isArray(cached) && cached.length > 0) {
+        const validCached = cached.filter(s => s && s.embed && !s.embed.includes('watch.php'));
+        if (validCached.length > 0) {
+          return { servers: validCached };
+        }
+      }
+    }
   }
 
   const servers = [];
@@ -646,23 +673,31 @@ async function scrapeWatchServers(vid) {
     const $ = cheerio.load(data);
 
     $('#WatchServers [data-embed]').each((_, el) => {
-      const embed = $(el).attr('data-embed');
+      let embed = $(el).attr('data-embed');
       if (embed) {
-        servers.push({
-          server: parseInt($(el).attr('data-server') || '0', 10),
-          label: $(el).find('span').text().trim() || $(el).text().trim() || `سيرفر ${$(el).attr('data-server') || ''}`,
-          embed
-        });
+        if (embed.includes('<iframe') || embed.includes('<IFRAME')) {
+          const m = embed.match(/src=["']([^"']+)["']/i);
+          if (m) embed = m[1];
+        }
+        if (!embed.includes('watch.php')) {
+          servers.push({
+            server: parseInt($(el).attr('data-server') || '0', 10),
+            label: $(el).find('span').text().trim() || $(el).text().trim() || `سيرفر ${$(el).attr('data-server') || ''}`,
+            embed,
+            source: 'kirmalk'
+          });
+        }
       }
     });
 
     if (servers.length === 0) {
       const iframeSrc = $('#Playerholder iframe, iframe').attr('src');
-      if (iframeSrc && !iframeSrc.includes('challenge-platform')) {
+      if (iframeSrc && !iframeSrc.includes('challenge-platform') && !iframeSrc.includes('watch.php')) {
         servers.push({
           server: 1,
           label: 'سيرفر رئيسي',
-          embed: iframeSrc
+          embed: iframeSrc,
+          source: 'kirmalk'
         });
       }
     }
@@ -673,22 +708,13 @@ async function scrapeWatchServers(vid) {
     try {
       const { data } = await http.get(`${BASE}/watch.php?vid=${cleanVid}`);
       const m = data.match(/"embedUrl":\s*"([^"]+)"/);
-      if (m && m[1]) {
+      if (m && m[1] && !m[1].includes('watch.php')) {
         servers.push({
           server: 1,
           label: 'سيرفر رئيسي',
-          embed: m[1]
+          embed: m[1],
+          source: 'kirmalk'
         });
-      } else {
-        const $ = cheerio.load(data);
-        const link = $('link[itemprop="embedUrl"]').attr('href');
-        if (link) {
-          servers.push({
-            server: 1,
-            label: 'سيرفر رئيسي',
-            embed: link
-          });
-        }
       }
     } catch (_) {}
   }
@@ -699,11 +725,12 @@ async function scrapeWatchServers(vid) {
       const { data } = await http.get(`${BASE}/embed.php?vid=${cleanVid}`);
       const $ = cheerio.load(data);
       const iframeSrc = $('iframe').attr('src');
-      if (iframeSrc && !iframeSrc.includes('challenge-platform')) {
+      if (iframeSrc && !iframeSrc.includes('challenge-platform') && !iframeSrc.includes('watch.php')) {
         servers.push({
           server: 1,
           label: 'سيرفر رئيسي',
-          embed: iframeSrc
+          embed: iframeSrc,
+          source: 'kirmalk'
         });
       }
     } catch (_) {}

@@ -150,6 +150,11 @@ async function scrapeKirmalkMovies(maxPages = 3) {
 
         const m = href ? href.match(/vid=([a-z0-9]+)/i) : null;
         if (m && rawTitle) {
+          // Strictly filter out any series episodes from movies
+          if (/(مسلسل|الحلق[ةه]|حلق[ةه]\s*\d+|الموسم|موسم|الجزء\s*\d+|S\d+E\d+)/i.test(rawTitle)) {
+            return;
+          }
+
           const vid = m[1];
           const cleanTitle = rawTitle.replace(/\s+/g, ' ').trim();
           if (!movies.some(x => x.rawId === vid)) {
