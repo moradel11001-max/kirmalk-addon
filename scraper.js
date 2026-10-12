@@ -23,46 +23,96 @@ const http = axios.create({
   maxRedirects: 5
 });
 
-// ---------- Stremio Manifest ----------
-const manifest = {
-  id: "org.kirmalk.addon",
-  version: "1.1.0",
-  name: "كرمالك TV (Kirmalk + Akwam + WeCima)",
-  description: "أفلام ومسلسلات عربية وتركية وأجنبية بجودة عالية مع سيرفرات بديلة من كرمالك وأكوام ووي سيما",
-  resources: ["catalog", "meta", "stream"],
-  types: ["movie", "series"],
-  catalogs: [
-    {
-      type: "movie",
-      id: "kirmalk_movies",
-      name: "الأفلام (Movies)",
-      extra: [
-        {
-          name: "genre",
-          options: ["الكل", "أفلام عربي", "أفلام أجنبي", "أفلام تركية", "مسرحيات"],
-          isRequired: false
-        },
-        { name: "search", isRequired: false },
-        { name: "skip", isRequired: false }
-      ]
-    },
-    {
-      type: "series",
-      id: "kirmalk_series",
-      name: "المسلسلات (Series)",
-      extra: [
-        {
-          name: "genre",
-          options: ["الكل", "مسلسلات عربية", "مسلسلات تركية", "مسلسلات مصرية", "مسلسلات شامية", "مسلسلات خليجية", "مسلسلات رمضان", "مسلسلات أجنبية", "مسلسلات مدبلجة"],
-          isRequired: false
-        },
-        { name: "search", isRequired: false },
-        { name: "skip", isRequired: false }
-      ]
+// ---------- All Supported Catalogs ----------
+const ALL_CATALOGS = [
+  {
+    type: "series",
+    id: "kirmalk_latest_series",
+    name: "🌟 أحدث المسلسلات (Latest Series)",
+    extra: [{ name: "skip", isRequired: false }]
+  },
+  {
+    type: "movie",
+    id: "kirmalk_latest_movies",
+    name: "🎬 أحدث الأفلام (Latest Movies)",
+    extra: [{ name: "skip", isRequired: false }]
+  },
+  {
+    type: "series",
+    id: "kirmalk_ramadan",
+    name: "🌙 مسلسلات رمضان (Ramadan)",
+    extra: [{ name: "skip", isRequired: false }]
+  },
+  {
+    type: "series",
+    id: "kirmalk_turkish",
+    name: "🇹🇷 مسلسلات تركية (Turkish Series)",
+    extra: [{ name: "skip", isRequired: false }]
+  },
+  {
+    type: "movie",
+    id: "kirmalk_arabic_movies",
+    name: "🇪🇬 أفلام عربي (Arabic Movies)",
+    extra: [{ name: "skip", isRequired: false }]
+  },
+  {
+    type: "series",
+    id: "kirmalk_series",
+    name: "📺 كل المسلسلات (All Series)",
+    extra: [
+      {
+        name: "genre",
+        options: ["الكل", "مسلسلات عربية", "مسلسلات تركية", "مسلسلات مصرية", "مسلسلات شامية", "مسلسلات خليجية", "مسلسلات رمضان", "مسلسلات أجنبية", "مسلسلات مدبلجة"],
+        isRequired: false
+      },
+      { name: "search", isRequired: false },
+      { name: "skip", isRequired: false }
+    ]
+  },
+  {
+    type: "movie",
+    id: "kirmalk_movies",
+    name: "🎥 كل الأفلام (All Movies)",
+    extra: [
+      {
+        name: "genre",
+        options: ["الكل", "أفلام عربي", "أفلام أجنبي", "أفلام تركية", "مسرحيات"],
+        isRequired: false
+      },
+      { name: "search", isRequired: false },
+      { name: "skip", isRequired: false }
+    ]
+  }
+];
+
+function getManifest(userConfig = null) {
+  let catalogs = ALL_CATALOGS;
+  if (userConfig && Array.isArray(userConfig.catalogs)) {
+    const selected = new Set(userConfig.catalogs);
+    catalogs = ALL_CATALOGS.filter(cat => {
+      // Main catalogs always stay for search
+      if (cat.id === 'kirmalk_series' || cat.id === 'kirmalk_movies') return true;
+      return selected.has(cat.id);
+    });
+  }
+
+  return {
+    id: "org.kirmalk.addon",
+    version: "1.2.0",
+    name: "كرمالك TV (Kirmalk + Akwam + WeCima)",
+    description: "أفلام ومسلسلات عربية وتركية وأجنبية بجودة عالية مع سيرفرات بديلة من كرمالك وأكوام ووي سيما",
+    resources: ["catalog", "meta", "stream"],
+    types: ["movie", "series"],
+    catalogs,
+    idPrefixes: ["km_", "ak_", "wc_"],
+    behaviorHints: {
+      configurable: true,
+      configurationRequired: false
     }
-  ],
-  idPrefixes: ["km_", "ak_", "wc_"]
-};
+  };
+}
+
+const manifest = getManifest();
 
 // ---------- Static Fallback Catalog (Bundled) ----------
 let initialData = {};
@@ -333,7 +383,18 @@ async function scrapeCategory(cat, page = 1, defaultType = 'series') {
 }
 
 // ---------- High-Level getCatalog for Stremio ----------
-async function getCatalog(type, extra = {}, hostUrl = '') {
+async function getCatalog(type, catalogIdOrExtra = '', maybeExtra = {}, hostUrl = '', userConfig = null) {
+  let catalogId = '';
+  let extra = {};
+
+  if (typeof catalogIdOrExtra === 'string' && (catalogIdOrExtra.startsWith('kirmalk_') || catalogIdOrExtra === '')) {
+    catalogId = catalogIdOrExtra;
+    extra = maybeExtra || {};
+  } else if (typeof catalogIdOrExtra === 'object' && catalogIdOrExtra !== null) {
+    extra = catalogIdOrExtra;
+    hostUrl = typeof maybeExtra === 'string' ? maybeExtra : '';
+  }
+
   let skip = 0;
   let search = null;
   let genre = null;
@@ -350,7 +411,7 @@ async function getCatalog(type, extra = {}, hostUrl = '') {
     genre = null;
   }
 
-  // For search: ALWAYS check purified consolidated catalog first for unified cards
+  // 1. For search: ALWAYS check purified consolidated catalog first for unified cards
   if (search) {
     const localMatches = getFallbackMetas(type, genre, search);
     if (localMatches.length > 0) {
@@ -363,7 +424,38 @@ async function getCatalog(type, extra = {}, hostUrl = '') {
     }
   }
 
-  // For series without search: ALWAYS serve from consolidated unified catalog for clean cards & instant response
+  // 2. Specific Home Page Catalog Rows
+  if (catalogId === 'kirmalk_latest_series') {
+    const list = initialData.series || [];
+    const paged = list.slice(skip, skip + 50);
+    return { metas: paged.map(m => ({ ...m, poster: formatPoster(m.poster, hostUrl) })) };
+  }
+
+  if (catalogId === 'kirmalk_latest_movies') {
+    const list = initialData.movies || [];
+    const paged = list.slice(skip, skip + 50);
+    return { metas: paged.map(m => ({ ...m, poster: formatPoster(m.poster, hostUrl) })) };
+  }
+
+  if (catalogId === 'kirmalk_ramadan') {
+    const list = initialData.ramadan || [];
+    const paged = list.slice(skip, skip + 50);
+    return { metas: paged.map(m => ({ ...m, poster: formatPoster(m.poster, hostUrl) })) };
+  }
+
+  if (catalogId === 'kirmalk_turkish') {
+    const list = initialData.turkish || [];
+    const paged = list.slice(skip, skip + 50);
+    return { metas: paged.map(m => ({ ...m, poster: formatPoster(m.poster, hostUrl) })) };
+  }
+
+  if (catalogId === 'kirmalk_arabic_movies') {
+    const list = (initialData.movies || []).filter(m => !m.section || m.section === 29 || m.category === 'افلام-عربي' || m.source === 'kirmalk');
+    const paged = list.slice(skip, skip + 50);
+    return { metas: paged.map(m => ({ ...m, poster: formatPoster(m.poster, hostUrl) })) };
+  }
+
+  // 3. For series without search: ALWAYS serve from consolidated unified catalog for clean cards & instant response
   if (type === 'series' && !search) {
     const fallbackList = getFallbackMetas('series', genre, null);
     const paged = fallbackList.slice(skip, skip + 50);
@@ -374,7 +466,7 @@ async function getCatalog(type, extra = {}, hostUrl = '') {
     return { metas };
   }
 
-  // For movies without search: ALWAYS serve from consolidated catalog for instant response
+  // 4. For movies without search: ALWAYS serve from consolidated catalog for instant response
   if (type === 'movie' && !search) {
     const fallbackList = getFallbackMetas('movie', genre, null);
     const paged = fallbackList.slice(skip, skip + 50);
@@ -740,7 +832,7 @@ async function scrapeWatchServers(vid) {
 }
 
 // ---------- High-Level getStreamsFor for Stremio ----------
-async function getStreamsFor(baseId, season, episode, hostUrl = '') {
+async function getStreamsFor(baseId, season, episode, hostUrl = '', userConfig = null) {
   let targetVid = null;
 
   if (typeof baseId === 'string' && baseId.includes(':')) {
@@ -888,13 +980,24 @@ async function getStreamsFor(baseId, season, episode, hostUrl = '') {
   });
 
   const streamLists = await Promise.all(streamPromises);
-  const playable = streamLists.flat();
+  let playable = streamLists.flat();
+
+  // If userConfig requested data saver mode, prioritize 720p and 480p
+  if (userConfig && userConfig.quality === 'saver') {
+    playable.sort((a, b) => {
+      const aIsFhd = (a.title || '').includes('1080p') || (a.title || '').includes('FHD');
+      const bIsFhd = (b.title || '').includes('1080p') || (b.title || '').includes('FHD');
+      return (aIsFhd ? 1 : 0) - (bIsFhd ? 1 : 0);
+    });
+  }
 
   return playable;
 }
 
 module.exports = {
   manifest,
+  getManifest,
+  ALL_CATALOGS,
   getCatalog,
   getMeta,
   getStreamsFor,
