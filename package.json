@@ -5,6 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "update": "node scripts/auto_update.js",
+    "purify": "node scripts/purify_and_consolidate.js",
     "tunnel": "npx localtunnel --port 7000"
   },
   "dependencies": {

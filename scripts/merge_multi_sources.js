@@ -42,7 +42,7 @@ async function mapConcurrent(items, concurrency, fn, onProgress) {
 }
 
 async function runMerger(options = {}) {
-  const isDeep = process.argv.includes('--deep') || options.deep !== false;
+  const isDeep = options.deep !== undefined ? options.deep : process.argv.includes('--deep');
   
   // Page limits: in deep mode, crawls wide across all archives
   const KIRMALK_SERIES_PAGES = options.kirmalkSeriesPages || (isDeep ? 35 : parseInt(process.env.KIRMALK_SERIES_PAGES || '5', 10));
@@ -185,13 +185,13 @@ async function runMerger(options = {}) {
         addedKmCount++;
         data.movies.push(m);
         existingMovies.push({ item: m, norm: normalizeArabicTitle(m.name), vid: m.rawId });
-        data.servers[m.rawId] = [{
-          server: 1,
-          label: 'سيرفر كرمالك الرئيسي',
-          embed: m.href,
-          source: 'kirmalk'
-        }];
-        data.servers[m.id] = data.servers[m.rawId];
+        try {
+          const srvs = await extractKirmalkServers(m.rawId);
+          if (srvs && srvs.length > 0) {
+            data.servers[m.rawId] = srvs;
+            data.servers[m.id] = srvs;
+          }
+        } catch (_) {}
       }
     }
     console.log(`Kirmalk Movies: ${addedKmCount} new movies added to catalog.`);
@@ -231,15 +231,14 @@ async function runMerger(options = {}) {
       }));
 
       for (const e of eps) {
-        const srv = [{
-          server: 1,
-          label: 'سيرفر كرمالك الرئيسي',
-          embed: e.href,
-          source: 'kirmalk'
-        }];
-        data.servers[e.vid] = srv;
-        data.servers[e.href] = srv;
         data.epToSeries[e.vid] = seriesId;
+        try {
+          const srvs = await extractKirmalkServers(e.vid);
+          if (srvs && srvs.length > 0) {
+            data.servers[e.vid] = srvs;
+            data.servers[e.href] = srvs;
+          }
+        } catch (_) {}
       }
 
       const seriesMetaObj = {
