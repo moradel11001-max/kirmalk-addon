@@ -941,18 +941,24 @@ async function getStreamsFor(baseId, season, episode, hostUrl = '', userConfig =
       }
 
       if (resolved && resolved.length > 0) {
-        return resolved.map(r => {
-          const referer = r.referer || s.embed;
-          const isHls = r.url.includes('.m3u8') || (r.title && r.title.includes('HLS'));
-          let streamUrl;
-          if (isHls) {
-            streamUrl = hostUrl
-              ? `${hostUrl}/proxy/stream.m3u8?url=${encodeURIComponent(r.url)}&referer=${encodeURIComponent(referer)}`
-              : r.url;
+        const serverStreams = [];
+        for (const r of resolved) {
+          let referer = r.referer || s.embed || 'https://kirmalk.com/';
+          if (sSource === 'akwam') {
+            referer = 'https://akwam.ss/';
+          } else if (sSource === 'wecima') {
+            referer = 'https://wecima.onl/';
           } else {
-            // Direct MP4 link for instant playback without Vercel proxy timeouts!
-            streamUrl = r.url;
+            try {
+              if (referer && referer.startsWith('http')) {
+                referer = new URL(referer).origin + '/';
+              }
+            } catch (_) {
+              referer = 'https://kirmalk.com/';
+            }
           }
+
+          const isHls = r.url.includes('.m3u8') || (r.title && r.title.includes('HLS'));
 
           let sourceName = 'كرمالك';
           if (sSource === 'akwam') sourceName = 'أكوام';
@@ -963,15 +969,42 @@ async function getStreamsFor(baseId, season, episode, hostUrl = '', userConfig =
             serverTitle = `[${s.label}] ${serverTitle}`;
           }
 
-          return {
+          // 1. Direct Stream with proxyHeaders (Fastest & Native for Android TV ExoPlayer)
+          serverStreams.push({
             name: sourceName,
-            title: serverTitle,
-            url: streamUrl,
+            title: `${serverTitle} ⚡ مباشر (ExoPlayer TV)`,
+            url: r.url,
             behaviorHints: {
-              notWebReady: false
+              notWebReady: false,
+              proxyHeaders: {
+                request: {
+                  'User-Agent': 'okhttp/4.9.3',
+                  'Referer': referer
+                }
+              }
             }
-          };
-        });
+          });
+
+          // 2. Backup Proxied Stream (For Web or when direct CDN is restricted)
+          if (hostUrl) {
+            const proxyPath = isHls ? '/proxy/stream.m3u8' : '/proxy/video.mp4';
+            serverStreams.push({
+              name: sourceName,
+              title: `${serverTitle} 🌐 بروكسي احتياطي (Proxy)`,
+              url: `${hostUrl}${proxyPath}?url=${encodeURIComponent(r.url)}&referer=${encodeURIComponent(referer)}`,
+              behaviorHints: {
+                notWebReady: false,
+                proxyHeaders: {
+                  request: {
+                    'User-Agent': 'okhttp/4.9.3',
+                    'Referer': referer
+                  }
+                }
+              }
+            });
+          }
+        }
+        return serverStreams;
       }
       return [];
     } catch (_) {

@@ -63,12 +63,10 @@ function renderConfigPage(req, preConfig = null) {
     : ['kirmalk_latest_series', 'kirmalk_latest_movies', 'kirmalk_ramadan', 'kirmalk_turkish', 'kirmalk_arabic_movies'];
 
   const quality = preConfig && preConfig.quality ? preConfig.quality : 'all';
-  const exoplayer = preConfig && preConfig.exoplayer !== undefined ? !!preConfig.exoplayer : true;
 
   const initialConfig = {
     catalogs: selectedCatalogs,
-    quality: quality,
-    exoplayer: exoplayer
+    quality: quality
   };
 
   const initialB64 = Buffer.from(JSON.stringify(initialConfig))
@@ -427,30 +425,12 @@ function renderConfigPage(req, preConfig = null) {
       </div>
     </div>
 
-    <!-- Section 3: ExoPlayer & Android TV Compatibility (with Educational Note) -->
-    <div class="section-card">
-      <div class="section-title">📺 مشغل ExoPlayer وشاشات التلفزيون (Android TV)</div>
-      <label class="option-item">
-        <input type="checkbox" id="exoplayer" ${exoplayer ? 'checked' : ''} onchange="updateUrls()">
-        <div class="option-label">
-          <span class="option-name">📺 تفعيل التوافق الكامل مع مشغل ExoPlayer وشاشات أندرويد</span>
-          <span class="option-desc">تشغيل مباشر وفوري داخل مشغل Stremio المدمج (مُوصى به بشدة).</span>
-        </div>
-      </label>
-
-      <!-- Detailed Arabic Educational Note for ExoPlayer -->
-      <div class="note-box">
-        <div class="note-header">💡 ما هو مشغل ExoPlayer ولماذا تحتاجه؟</div>
-        <p style="margin: 0 0 8px;">
-          مشغل <b>ExoPlayer</b> هو المحرك الرسمي المدمج داخل تطبيق <b>Stremio</b> على شاشات التلفزيون الذكية (Android TV / Google TV / TV Box مثل شاومي وكروم كاست) وكذلك على هواتف الأندرويد.
-        </p>
-        <p style="margin: 0 0 8px;">
-          تفعيل هذا الخيار يقوم تلقائياً بتهيئة وصياغة روابط وسيرفرات البث (بصيغ HLS و MP4 المتوافقة) لتعمل <b>مباشرة وبسلاسة تامة داخل ستريميو بنقرة واحدة</b>، دون شاشة سوداء وبدون الحاجة لتحميل أو فتح مشغلات فيديو خارجية معقدة مثل VLC Player.
-        </p>
-        <p style="margin: 0;">
-          إذا كنت تشاهد ستريميو عبر شاشة تلفزيون أو هاتف، اتركه <b>مفعّلاً</b> للحصول على أسهل وأسرع تجربة تشغيل دون أي خطوات إضافية.
-        </p>
-      </div>
+    <!-- TV Compatibility Info (Auto-enabled permanently) -->
+    <div class="note-box" style="margin-top: 0; margin-bottom: 20px;">
+      <div class="note-header">📺 دعم مشغل ExoPlayer وشاشات التلفزيون (Android TV)</div>
+      <p style="margin: 0 0 6px;">
+        تم تهيئة وتجهيز الإضافة لتعمل تلقائياً وبأقصى سرعة عبر مشغل <b>ExoPlayer</b> الرسمي المدمج داخل <b>Stremio</b> لشاشات التلفزيون وهواتف الأندرويد (بروابط مباشرة عالية الكفاءة ودعم التوجيه الذكي) دون الحاجة لمشغلات خارجية.
+      </p>
     </div>
 
     <!-- Installation Actions -->
@@ -482,12 +462,10 @@ function renderConfigPage(req, preConfig = null) {
 
       const qualityEl = document.querySelector('input[name="quality"]:checked');
       const quality = qualityEl ? qualityEl.value : 'all';
-      const exoplayer = document.getElementById('exoplayer').checked;
 
       const configObj = {
         catalogs: selectedCatalogs,
-        quality: quality,
-        exoplayer: exoplayer
+        quality: quality
       };
 
       const jsonStr = JSON.stringify(configObj);
@@ -707,6 +685,45 @@ app.get('/proxy/image.jpg', async (req, res) => {
   }
 });
 
+// ---------- AES Key Proxy Endpoint (Fixes ExoPlayer Decryption Errors) ----------
+app.get('/proxy/key', async (req, res) => {
+  const targetUrl = req.query.url;
+  const referer = req.query.referer || 'https://kirmalk.com/';
+
+  if (!targetUrl) {
+    return res.status(400).send('Missing url parameter');
+  }
+
+  try {
+    const response = await axios({
+      method: 'get',
+      url: targetUrl,
+      headers: {
+        'User-Agent': 'okhttp/4.9.3',
+        'Referer': referer
+      },
+      httpsAgent: agent,
+      responseType: 'arraybuffer',
+      validateStatus: () => true,
+      timeout: 10000
+    });
+
+    res.status(response.status);
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Headers', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+    res.setHeader('Access-Control-Allow-Private-Network', 'true');
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    return res.send(response.data);
+  } catch (err) {
+    console.error('Key Proxy error:', err.message);
+    if (!res.headersSent) {
+      res.status(502).send('Key proxy error');
+    }
+  }
+});
+
 // ---------- HLS & MP4 Stream Proxy Endpoints ----------
 app.get([
   '/proxy/stream.m3u8',
@@ -736,15 +753,49 @@ app.get([
 
     const isM3U8Route = req.path.includes('.m3u8') || targetUrl.includes('.m3u8');
 
-    // 1. Direct redirect for MP4 video files to eliminate proxy timeouts & 502 errors
+    // 1. MP4 Video Stream: forward Range requests with Referer to support ExoPlayer seek & resume
     if (req.path.includes('.mp4') || targetUrl.includes('.mp4')) {
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Access-Control-Allow-Private-Network', 'true');
-      return res.redirect(targetUrl);
+      try {
+        const streamHeaders = {
+          'User-Agent': 'okhttp/4.9.3',
+          'Referer': referer
+        };
+        if (req.headers.range) {
+          streamHeaders['Range'] = req.headers.range;
+        }
+
+        const response = await axios({
+          method: 'get',
+          url: targetUrl,
+          headers: streamHeaders,
+          httpsAgent: agent,
+          responseType: 'stream',
+          validateStatus: () => true,
+          timeout: 25000
+        });
+
+        res.status(response.status);
+        for (const [k, v] of Object.entries(response.headers)) {
+          if (['content-length', 'content-range', 'accept-ranges', 'content-type'].includes(k.toLowerCase())) {
+            res.setHeader(k, v);
+          }
+        }
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Headers', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+        res.setHeader('Access-Control-Allow-Private-Network', 'true');
+        res.setHeader('Content-Type', 'video/mp4');
+
+        return response.data.pipe(res);
+      } catch (err) {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Private-Network', 'true');
+        return res.redirect(targetUrl);
+      }
     }
 
+    // 2. Binary TS chunk streaming
     if (!isM3U8Route) {
-      // Stream binary TS chunks directly via pipe with relaxed SSL
       const response = await axios({
         method: 'get',
         url: targetUrl,
@@ -752,7 +803,7 @@ app.get([
         httpsAgent: agent,
         responseType: 'stream',
         validateStatus: () => true,
-        timeout: 20000
+        timeout: 25000
       });
 
       res.status(response.status);
@@ -766,6 +817,7 @@ app.get([
       res.setHeader('Access-Control-Allow-Headers', '*');
       res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
       res.setHeader('Access-Control-Allow-Private-Network', 'true');
+      res.setHeader('Cache-Control', 'public, max-age=86400');
 
       if (req.path.includes('.ts') || targetUrl.includes('.ts')) {
         res.setHeader('Content-Type', 'video/mp2t');
@@ -774,7 +826,7 @@ app.get([
       return response.data.pipe(res);
     }
 
-    // Playlist parsing and link rewriting
+    // 3. Playlist parsing and link rewriting (M3U8)
     const response = await axios({
       method: 'get',
       url: targetUrl,
@@ -782,7 +834,7 @@ app.get([
       httpsAgent: agent,
       responseType: 'arraybuffer',
       validateStatus: () => true,
-      timeout: 10000
+      timeout: 12000
     });
 
     res.status(response.status);
@@ -809,12 +861,23 @@ app.get([
         if (trimmed.startsWith('#EXT-X-STREAM-INF:')) {
           isNextSub = true;
         }
-        if (trimmed.includes('URI="')) {
+
+        // Dedicated AES Key rewriting to /proxy/key
+        if (trimmed.includes('#EXT-X-KEY') && trimmed.includes('URI="')) {
           return line.replace(/URI="([^"]+)"/, (m, uri) => {
             const fullKeyUrl = uri.startsWith('http') ? uri : new URL(uri, targetUrl).toString();
-            return `URI="${hostUrl}/proxy/segment.ts?url=${encodeURIComponent(fullKeyUrl)}&referer=${encodeURIComponent(referer)}"`;
+            return `URI="${hostUrl}/proxy/key?url=${encodeURIComponent(fullKeyUrl)}&referer=${encodeURIComponent(referer)}"`;
           });
         }
+
+        // Media (Audio / Subtitles) rewriting to /proxy/sub.m3u8
+        if (trimmed.includes('#EXT-X-MEDIA') && trimmed.includes('URI="')) {
+          return line.replace(/URI="([^"]+)"/, (m, uri) => {
+            const fullMediaUrl = uri.startsWith('http') ? uri : new URL(uri, targetUrl).toString();
+            return `URI="${hostUrl}/proxy/sub.m3u8?url=${encodeURIComponent(fullMediaUrl)}&referer=${encodeURIComponent(referer)}"`;
+          });
+        }
+
         return line;
       }
 
