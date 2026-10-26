@@ -275,6 +275,19 @@ function cleanId(id) {
   return cleaned;
 }
 
+function normalizeTitle(title) {
+  if (!title) return '';
+  return title
+    .toLowerCase()
+    .replace(/^(مسلسل|فيلم|برنامج|سلسلة)\s+/i, '')
+    .replace(/[أإآ]/g, 'ا')
+    .replace(/ة/g, 'ه')
+    .replace(/ى/g, 'ي')
+    .replace(/[^\p{L}\p{N}\s]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function extractEpisode(title) {
   if (!title) return null;
   const m = title.match(/الحلقة\s*(\d+)/i);
@@ -570,8 +583,7 @@ async function getMeta(type, id, hostUrl = '') {
           background: formatPoster(unified.background || unified.poster, hostUrl),
           videos: (unified.videos || []).map(v => {
             const epNum = parseInt(v.episode, 10) || 1;
-            const daysAgo = Math.max(0, totalEps - epNum);
-            const relDate = v.released || new Date(Date.now() - (daysAgo * 86400000)).toISOString();
+            const relDate = v.released || new Date(Date.UTC(2024, 0, Math.min(28, epNum), 12, 0, 0)).toISOString();
             return {
               ...v,
               id: `${metaSeriesId}:1:${epNum}`,
@@ -692,8 +704,7 @@ async function getMeta(type, id, hostUrl = '') {
         videos.sort((a, b) => a.episode - b.episode);
         const totalEps = videos.length;
         videos.forEach(v => {
-          const daysAgo = Math.max(0, totalEps - v.episode);
-          v.released = new Date(Date.now() - (daysAgo * 86400000)).toISOString();
+          v.released = new Date(Date.UTC(2024, 0, Math.min(28, v.episode), 12, 0, 0)).toISOString();
         });
         meta.videos = videos;
       }
@@ -725,14 +736,13 @@ async function getMeta(type, id, hostUrl = '') {
           const totalEps = initialData.seriesMeta[cleanVid].length;
           meta.videos = initialData.seriesMeta[cleanVid].map(ep => {
             const epNum = parseInt(ep.episode, 10) || 1;
-            const daysAgo = Math.max(0, totalEps - epNum);
             return {
               id: `${id}:1:${epNum}`,
               vid: ep.vid,
               title: `الحلقة ${epNum}`,
               season: 1,
               episode: epNum,
-              released: ep.released || new Date(Date.now() - (daysAgo * 86400000)).toISOString()
+              released: ep.released || new Date(Date.UTC(2024, 0, Math.min(28, epNum), 12, 0, 0)).toISOString()
             };
           });
         } else {
@@ -863,139 +873,247 @@ async function scrapeWatchServers(vid) {
 // ---------- High-Level getStreamsFor for Stremio ----------
 async function getStreamsFor(baseId, season, episode, hostUrl = '', userConfig = null) {
   let targetVid = null;
-  let servers = [];
+  let rawServers = [];
   let seriesId = '';
   let epNum = 1;
+  let isSeries = false;
 
   if (typeof baseId === 'string' && baseId.includes(':')) {
+    isSeries = true;
     const parts = baseId.split(':');
     seriesId = parts[0];
     epNum = parseInt(parts[2], 10) || 1;
-    const cleanBase = cleanId(seriesId);
-
     if (parts.length >= 4 && parts[3]) {
       targetVid = parts[3];
     }
-
-    if (initialData.unifiedSeries) {
-      const s = initialData.unifiedSeries[seriesId] ||
-                initialData.unifiedSeries[cleanBase] ||
-                initialData.unifiedSeries[`km_s_${cleanBase}`] ||
-                initialData.unifiedSeries[`ak_s_${cleanBase}`] ||
-                initialData.unifiedSeries[`wc_s_${cleanBase}`] ||
-                Object.values(initialData.unifiedSeries).find(x => x.id === seriesId || cleanId(x.id) === cleanBase);
-
-      if (s && s.videos) {
-        const ep = s.videos.find(v => v.episode === epNum || (targetVid && v.vid === targetVid));
-        if (ep) {
-          if (!targetVid && ep.vid) targetVid = ep.vid;
-          if (ep.href) {
-            const sSource = s.source || (ep.href.includes('akwam') ? 'akwam' : 'wecima');
-            const label = sSource === 'akwam' ? 'سيرفر أكوام (MP4)' : 'سيرفر وي سيما (HD HLS)';
-            servers = [{ server: 1, label, embed: ep.href, source: sSource }];
-          }
-        }
-      }
-    }
-
-    if (!targetVid && initialData.seriesMeta && initialData.seriesMeta[cleanBase]) {
-      const ep = initialData.seriesMeta[cleanBase].find(v => v.episode === epNum);
-      if (ep && ep.vid) targetVid = ep.vid;
-    }
-
-    if (!targetVid) {
-      targetVid = cleanBase;
-    }
   } else if (season && episode) {
+    isSeries = true;
     seriesId = baseId;
     epNum = parseInt(episode, 10) || 1;
-    const cleanBase = cleanId(baseId);
-
-    if (initialData.unifiedSeries) {
-      const s = initialData.unifiedSeries[seriesId] ||
-                initialData.unifiedSeries[cleanBase] ||
-                initialData.unifiedSeries[`km_s_${cleanBase}`] ||
-                initialData.unifiedSeries[`ak_s_${cleanBase}`] ||
-                initialData.unifiedSeries[`wc_s_${cleanBase}`] ||
-                Object.values(initialData.unifiedSeries).find(x => x.id === seriesId || cleanId(x.id) === cleanBase);
-
-      if (s && s.videos) {
-        const ep = s.videos.find(v => v.episode === epNum);
-        if (ep) {
-          if (!targetVid && ep.vid) targetVid = ep.vid;
-          if (ep.href) {
-            const sSource = s.source || (ep.href.includes('akwam') ? 'akwam' : 'wecima');
-            const label = sSource === 'akwam' ? 'سيرفر أكوام (MP4)' : 'سيرفر وي سيما (HD HLS)';
-            servers = [{ server: 1, label, embed: ep.href, source: sSource }];
-          }
-        }
-      }
-    }
-
-    if (!targetVid && initialData.seriesMeta && initialData.seriesMeta[cleanBase]) {
-      const ep = initialData.seriesMeta[cleanBase].find(v => v.episode === epNum);
-      if (ep && ep.vid) targetVid = ep.vid;
-    }
-
-    if (!targetVid) {
-      targetVid = cleanBase;
-    }
   } else {
     seriesId = baseId;
     targetVid = cleanId(baseId);
   }
 
-  if ((!servers || servers.length === 0) && targetVid) {
-    const scraped = await scrapeWatchServers(targetVid);
-    if (scraped && scraped.servers && scraped.servers.length > 0) {
-      servers = scraped.servers;
-    }
-  }
+  if (isSeries) {
+    const cleanBase = cleanId(seriesId);
+    const candidateVids = new Set();
+    if (targetVid) candidateVids.add(targetVid);
 
-  // Fallback for movies: check if baseId matches a movie directly in initialData.movies
-  if ((!servers || servers.length === 0) && initialData.movies) {
-    const movie = initialData.movies.find(m => m.id === baseId || cleanId(m.id) === targetVid || m.rawId === targetVid);
-    if (movie && movie.href) {
-      if (movie.source === 'wecima') {
-        servers = [{ server: 1, label: 'سيرفر وي سيما (HD HLS)', embed: movie.href, source: 'wecima' }];
-      } else if (movie.source === 'akwam') {
-        servers = [{ server: 1, label: 'سيرفر أكوام (1080p MP4)', embed: movie.href, source: 'akwam' }];
-      }
+    // 1. Locate primary series in unifiedSeries
+    let mainSeries = null;
+    if (initialData.unifiedSeries) {
+      mainSeries = initialData.unifiedSeries[seriesId] ||
+                   initialData.unifiedSeries[cleanBase] ||
+                   initialData.unifiedSeries[`km_s_${cleanBase}`] ||
+                   initialData.unifiedSeries[`ak_s_${cleanBase}`] ||
+                   initialData.unifiedSeries[`wc_s_${cleanBase}`] ||
+                   Object.values(initialData.unifiedSeries).find(x => x.id === seriesId || cleanId(x.id) === cleanBase);
     }
-  }
 
-  // Fallback for series episodes: check if episode is inside unifiedSeries
-  if ((!servers || servers.length === 0) && initialData.unifiedSeries) {
-    for (const [sKey, sObj] of Object.entries(initialData.unifiedSeries)) {
-      if (sObj && sObj.videos) {
-        const ep = sObj.videos.find(v => v.id === baseId || v.vid === targetVid || cleanId(v.id) === targetVid || (sObj.id === seriesId && v.episode === epNum));
-        if (ep && (ep.href || sObj.href)) {
-          const embedUrl = ep.href || sObj.href;
-          if (sObj.source === 'akwam' || embedUrl.includes('akwam')) {
-            servers = [{ server: 1, label: 'سيرفر أكوام (MP4)', embed: embedUrl, source: 'akwam' }];
-            break;
-          } else if (sObj.source === 'wecima' || embedUrl.includes('wecima')) {
-            servers = [{ server: 1, label: 'سيرفر وي سيما (HD HLS)', embed: embedUrl, source: 'wecima' }];
-            break;
+    const seriesTitle = mainSeries ? (mainSeries.name || mainSeries.title) : '';
+    const normTargetTitle = normalizeTitle(seriesTitle);
+
+    // 2. Multi-source series aggregation: match other entries with similar title
+    const matchedSeriesList = [];
+    if (mainSeries) matchedSeriesList.push(mainSeries);
+
+    if (normTargetTitle && initialData.unifiedSeries) {
+      for (const [k, sObj] of Object.entries(initialData.unifiedSeries)) {
+        if (sObj && sObj !== mainSeries) {
+          const sNorm = normalizeTitle(sObj.name || sObj.title);
+          if (sNorm && (sNorm === normTargetTitle || sNorm.includes(normTargetTitle) || normTargetTitle.includes(sNorm))) {
+            matchedSeriesList.push(sObj);
           }
         }
       }
     }
+
+    // 3. Collect episode data and servers across all matched series variants
+    for (const sObj of matchedSeriesList) {
+      if (!sObj.videos) continue;
+      const eps = sObj.videos.filter(v => v.episode === epNum || (targetVid && v.vid === targetVid));
+      for (const ep of eps) {
+        if (ep.vid) candidateVids.add(ep.vid);
+        if (ep.href) {
+          if (ep.href.includes('akwam')) {
+            rawServers.push({ server: 1, label: 'سيرفر أكوام (MP4)', embed: ep.href, source: 'akwam' });
+          } else if (ep.href.includes('wecima')) {
+            rawServers.push({ server: 1, label: 'سيرفر وي سيما (HD HLS)', embed: ep.href, source: 'wecima' });
+          } else if (ep.href.includes('watch.php') || ep.href.includes('vid=')) {
+            const m = ep.href.match(/vid=([a-zA-Z0-9_-]+)/);
+            if (m) candidateVids.add(m[1]);
+          } else {
+            rawServers.push({ server: 1, label: 'سيرفر رئيسي', embed: ep.href, source: 'kirmalk' });
+          }
+        }
+      }
+    }
+
+    // 4. Also check seriesMeta for cleanBase and any candidateVids
+    if (initialData.seriesMeta) {
+      const metaKeys = [cleanBase, ...Array.from(candidateVids)];
+      for (const k of metaKeys) {
+        if (initialData.seriesMeta[k]) {
+          const ep = initialData.seriesMeta[k].find(v => v.episode === epNum);
+          if (ep) {
+            if (ep.vid) candidateVids.add(ep.vid);
+            if (ep.href) {
+              if (ep.href.includes('akwam')) {
+                rawServers.push({ server: 1, label: 'سيرفر أكوام (MP4)', embed: ep.href, source: 'akwam' });
+              } else if (ep.href.includes('wecima')) {
+                rawServers.push({ server: 1, label: 'سيرفر وي سيما (HD HLS)', embed: ep.href, source: 'wecima' });
+              } else if (ep.href.includes('watch.php') || ep.href.includes('vid=')) {
+                const m = ep.href.match(/vid=([a-zA-Z0-9_-]+)/);
+                if (m) candidateVids.add(m[1]);
+              } else {
+                rawServers.push({ server: 1, label: 'سيرفر رئيسي', embed: ep.href, source: 'kirmalk' });
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // 5. Aggregate all servers bundled in initialData.servers for all candidate vids
+    if (initialData.servers) {
+      for (const vid of candidateVids) {
+        const cached = initialData.servers[vid] || initialData.servers[cleanId(vid)];
+        if (Array.isArray(cached)) {
+          for (const s of cached) {
+            if (s && s.embed && !s.embed.includes('watch.php')) {
+              rawServers.push(s);
+            }
+          }
+        }
+      }
+    }
+
+    // 6. If we have fewer than 2 servers, attempt live scrape of watch servers
+    if (rawServers.length < 2 && candidateVids.size > 0) {
+      for (const vid of candidateVids) {
+        try {
+          const scraped = await scrapeWatchServers(vid);
+          if (scraped && scraped.servers && scraped.servers.length > 0) {
+            for (const s of scraped.servers) {
+              if (s && s.embed && !s.embed.includes('watch.php')) {
+                rawServers.push(s);
+              }
+            }
+          }
+        } catch (_) {}
+      }
+    }
+
+    if (!targetVid && candidateVids.size > 0) {
+      targetVid = Array.from(candidateVids)[0];
+    }
+  } else {
+    // Media is a Movie
+    const cleanBase = cleanId(baseId);
+    const candidateVids = new Set([cleanBase]);
+    if (targetVid) candidateVids.add(targetVid);
+
+    let mainMovie = null;
+    if (initialData.movies) {
+      mainMovie = initialData.movies.find(m => m.id === baseId || cleanId(m.id) === cleanBase || m.rawId === cleanBase);
+    }
+    const movieTitle = mainMovie ? (mainMovie.name || mainMovie.title) : '';
+    const normMovieTitle = normalizeTitle(movieTitle);
+
+    const matchedMovies = [];
+    if (mainMovie) matchedMovies.push(mainMovie);
+    if (normMovieTitle && initialData.movies) {
+      for (const m of initialData.movies) {
+        if (m !== mainMovie) {
+          const mNorm = normalizeTitle(m.name || m.title);
+          if (mNorm && (mNorm === normMovieTitle || mNorm.includes(normMovieTitle) || normMovieTitle.includes(mNorm))) {
+            matchedMovies.push(m);
+          }
+        }
+      }
+    }
+
+    for (const m of matchedMovies) {
+      if (m.rawId) candidateVids.add(m.rawId);
+      if (m.href) {
+        if (m.source === 'akwam' || m.href.includes('akwam')) {
+          rawServers.push({ server: 1, label: 'سيرفر أكوام (1080p MP4)', embed: m.href, source: 'akwam' });
+        } else if (m.source === 'wecima' || m.href.includes('wecima')) {
+          rawServers.push({ server: 1, label: 'سيرفر وي سيما (HD HLS)', embed: m.href, source: 'wecima' });
+        } else if (m.href.includes('watch.php') || m.href.includes('vid=')) {
+          const match = m.href.match(/vid=([a-zA-Z0-9_-]+)/);
+          if (match) candidateVids.add(match[1]);
+        } else {
+          rawServers.push({ server: 1, label: 'سيرفر رئيسي', embed: m.href, source: 'kirmalk' });
+        }
+      }
+    }
+
+    // Pull from initialData.servers
+    if (initialData.servers) {
+      for (const vid of candidateVids) {
+        const cached = initialData.servers[vid] || initialData.servers[cleanId(vid)];
+        if (Array.isArray(cached)) {
+          for (const s of cached) {
+            if (s && s.embed && !s.embed.includes('watch.php')) {
+              rawServers.push(s);
+            }
+          }
+        }
+      }
+    }
+
+    // Scrape if needed
+    if (rawServers.length < 2) {
+      for (const vid of candidateVids) {
+        try {
+          const scraped = await scrapeWatchServers(vid);
+          if (scraped && scraped.servers && scraped.servers.length > 0) {
+            for (const s of scraped.servers) {
+              if (s && s.embed && !s.embed.includes('watch.php')) {
+                rawServers.push(s);
+              }
+            }
+          }
+        } catch (_) {}
+      }
+    }
   }
 
-  if (!servers || servers.length === 0) return [];
+  if (!rawServers || rawServers.length === 0) return [];
 
-  // Extract raw embed URL if wrapped inside iframe HTML tag
-  const cleanedServers = servers.map(s => {
+  // Deduplicate servers and extract iframe embeds if wrapped
+  const seenEmbeds = new Set();
+  const cleanedServers = [];
+
+  for (const s of rawServers) {
     let embed = s.embed;
-    if (embed && (embed.includes('<iframe') || embed.includes('<IFRAME'))) {
+    if (!embed) continue;
+    if (embed.includes('<iframe') || embed.includes('<IFRAME')) {
       const m = embed.match(/src=["']([^"']+)["']/i);
       if (m) embed = m[1];
     }
-    return { ...s, embed };
-  });
+    if (!embed || embed.includes('watch.php') || seenEmbeds.has(embed)) continue;
+    seenEmbeds.add(embed);
 
-  const safeSeriesKey = (seriesId || cleanId(baseId) || 'series').replace(/[^a-zA-Z0-9_-]/g, '_');
+    let sSource = s.source;
+    if (embed.includes('akwam')) sSource = 'akwam';
+    else if (embed.includes('wecima')) sSource = 'wecima';
+    else if (!sSource) sSource = 'kirmalk';
+
+    cleanedServers.push({
+      ...s,
+      embed,
+      source: sSource
+    });
+  }
+
+  if (cleanedServers.length === 0) return [];
+
+  const safeSeriesKey = (seriesId || cleanId(baseId) || 'media').replace(/[^a-zA-Z0-9_-]/g, '_');
+  const bingeGroupDirect = `${safeSeriesKey}-direct`;
+  const bingeGroupProxy = `${safeSeriesKey}-proxy`;
 
   const streamPromises = cleanedServers.map(async (s) => {
     try {
@@ -1012,8 +1130,6 @@ async function getStreamsFor(baseId, season, episode, hostUrl = '', userConfig =
 
       if (resolved && resolved.length > 0) {
         const serverStreams = [];
-        const bingeGroupDirect = `${safeSeriesKey}-${sSource}-direct`;
-        const bingeGroupProxy = `${safeSeriesKey}-${sSource}-proxy`;
 
         for (const r of resolved) {
           let referer = r.referer || s.embed || 'https://kirmalk.com/';
