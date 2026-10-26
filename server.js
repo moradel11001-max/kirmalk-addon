@@ -643,8 +643,31 @@ app.get('/debug-stream/:id', async (req, res) => {
     const season = parts[1];
     const episode = parts[2];
     const hostUrl = getHostUrl(req);
+    const resolver = require('./resolver');
+    const scraper = require('./scraper');
+
+    const cleanBase = parts[0].replace(/^(km|ak|wc)_[ms]_?/, '').replace(/^(km|ak|wc)_/, '');
+    const s = initialData.unifiedSeries?.[parts[0]] || initialData.unifiedSeries?.[cleanBase];
+    const ep = s?.videos?.find(v => v.episode === parseInt(episode, 10));
+    
+    let scrapedServers = [];
+    if (ep && ep.vid) {
+      const scr = await scraper.scrapeWatchServers(ep.vid);
+      scrapedServers = scr.servers || [];
+    }
+
+    const resolutionDetails = [];
+    for (const srv of scrapedServers) {
+      try {
+        const resolved = await resolver.resolveEmbed(srv.embed);
+        resolutionDetails.push({ embed: srv.embed, resolvedCount: resolved.length, resolved });
+      } catch (err) {
+        resolutionDetails.push({ embed: srv.embed, error: err.message });
+      }
+    }
+
     const streams = await getStreamsFor(id, season, episode, hostUrl);
-    res.json({ id, hostUrl, count: streams ? streams.length : 0, streams });
+    res.json({ id, season, episode, foundSeries: !!s, foundEp: !!ep, epVid: ep?.vid, scrapedServers, resolutionDetails, streamsCount: streams ? streams.length : 0, streams });
   } catch (err) {
     res.status(500).json({ error: err.message, stack: err.stack });
   }
