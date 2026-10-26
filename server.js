@@ -629,12 +629,26 @@ async function handleStreamRequest(req, res, userConfig, type, rawId) {
       };
     }
 
-    res.json({ streams: result });
+    res.json({ streams: result, ...(req.query.debug ? { debug: { id, hostUrl, count: result.length } } : {}) });
   } catch (e) {
     console.error('Stream route error:', e.message);
-    res.json({ streams: [] });
+    res.json({ streams: [], error: e.message, stack: e.stack });
   }
 }
+
+app.get('/debug-stream/:id', async (req, res) => {
+  try {
+    const id = (req.params.id || '').replace(/\.json$/, '');
+    const parts = id.split(':');
+    const season = parts[1];
+    const episode = parts[2];
+    const hostUrl = getHostUrl(req);
+    const streams = await getStreamsFor(id, season, episode, hostUrl);
+    res.json({ id, hostUrl, count: streams ? streams.length : 0, streams });
+  } catch (err) {
+    res.status(500).json({ error: err.message, stack: err.stack });
+  }
+});
 
 app.get('/stream/:type/:id.json', (req, res) => {
   handleStreamRequest(req, res, null, req.params.type, req.params.id);

@@ -1,12 +1,16 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
+const https = require('https');
+
+const agent = new https.Agent({ rejectUnauthorized: false });
 
 const http = axios.create({
   headers: {
     'User-Agent': 'okhttp/4.9.3',
     'Referer': 'https://kirmalk.com/'
   },
-  timeout: 8000,
+  httpsAgent: agent,
+  timeout: 10000,
   maxRedirects: 5
 });
 
