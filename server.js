@@ -639,38 +639,27 @@ async function handleStreamRequest(req, res, userConfig, type, rawId) {
 
 app.get('/debug-stream/:id', async (req, res) => {
   try {
-    const id = (req.params.id || '').replace(/\.json$/, '');
-    const parts = id.split(':');
-    const season = parts[1];
-    const episode = parts[2];
-    const hostUrl = getHostUrl(req);
-    const resolver = require('./resolver');
-    const scraper = require('./scraper');
-
-    const cleanBase = parts[0].replace(/^(km|ak|wc)_[ms]_?/, '').replace(/^(km|ak|wc)_/, '');
-    const s = initialData.unifiedSeries?.[parts[0]] || initialData.unifiedSeries?.[cleanBase];
-    const ep = s?.videos?.find(v => v.episode === parseInt(episode, 10));
-    
-    let scrapedServers = [];
-    if (ep && ep.vid) {
-      const scr = await scraper.scrapeWatchServers(ep.vid);
-      scrapedServers = scr.servers || [];
+    const testUrl = 'https://s1.hdup400.com/embed-g4a8jj8zgyad.html';
+    let fetchRes = null;
+    let fetchErr = null;
+    try {
+      const r = await axios.get(testUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          'Referer': 'https://kirmalk.com/'
+        },
+        httpsAgent: agent,
+        timeout: 10000,
+        validateStatus: () => true
+      });
+      fetchRes = { status: r.status, headers: r.headers, snippet: (typeof r.data === 'string' ? r.data.slice(0, 600) : 'not-string') };
+    } catch (err) {
+      fetchErr = { message: err.message, code: err.code };
     }
 
-    const resolutionDetails = [];
-    for (const srv of scrapedServers) {
-      try {
-        const resolved = await resolver.resolveEmbed(srv.embed);
-        resolutionDetails.push({ embed: srv.embed, resolvedCount: resolved.length, resolved });
-      } catch (err) {
-        resolutionDetails.push({ embed: srv.embed, error: err.message });
-      }
-    }
-
-    const streams = await getStreamsFor(id, season, episode, hostUrl);
-    res.json({ id, season, episode, foundSeries: !!s, foundEp: !!ep, epVid: ep?.vid, scrapedServers, resolutionDetails, streamsCount: streams ? streams.length : 0, streams });
+    res.json({ fetchRes, fetchErr });
   } catch (err) {
-    res.status(500).json({ error: err.message, stack: err.stack });
+    res.status(500).json({ error: err.message });
   }
 });
 
