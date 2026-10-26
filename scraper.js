@@ -557,17 +557,30 @@ async function getMeta(type, id, hostUrl = '') {
         initialData.unifiedSeries[cleanVid] ||
         initialData.unifiedSeries[`wc_s_${cleanVid}`] ||
         initialData.unifiedSeries[`ak_s_${cleanVid}`] ||
-        initialData.unifiedSeries[`km_s_${cleanVid}`]
+        initialData.unifiedSeries[`km_s_${cleanVid}`] ||
+        Object.values(initialData.unifiedSeries).find(s => s.id === id || cleanId(s.id) === cleanVid)
       )) || null;
       if (unified) {
+        const totalEps = (unified.videos || []).length;
+        const metaSeriesId = id || unified.id;
         meta = {
           ...unified,
+          id: metaSeriesId,
           poster: formatPoster(unified.poster, hostUrl),
           background: formatPoster(unified.background || unified.poster, hostUrl),
-          videos: (unified.videos || []).map(v => ({
-            ...v,
-            id: `${unified.id}:1:${v.episode}:${v.vid}`
-          }))
+          videos: (unified.videos || []).map(v => {
+            const epNum = parseInt(v.episode, 10) || 1;
+            const daysAgo = Math.max(0, totalEps - epNum);
+            const relDate = v.released || new Date(Date.now() - (daysAgo * 86400000)).toISOString();
+            return {
+              ...v,
+              id: `${metaSeriesId}:1:${epNum}`,
+              title: v.title || `الحلقة ${epNum}`,
+              season: 1,
+              episode: epNum,
+              released: relDate
+            };
+          })
         };
         setCache(cacheKey, meta, 7200000);
         return meta;
@@ -657,7 +670,8 @@ async function getMeta(type, id, hostUrl = '') {
           const epNum = parseInt(numText, 10) || (idx + 1);
 
           videos.push({
-            id: `${id}:1:${epNum}:${epVid}`,
+            id: `${id}:1:${epNum}`,
+            vid: epVid,
             title: `الحلقة ${epNum}`,
             season: 1,
             episode: epNum
@@ -667,7 +681,8 @@ async function getMeta(type, id, hostUrl = '') {
         if (videos.length === 0) {
           const epNum = extractEpisode(title) || 1;
           videos.push({
-            id: `${id}:1:${epNum}:${cleanVid}`,
+            id: `${id}:1:${epNum}`,
+            vid: cleanVid,
             title: `الحلقة ${epNum}`,
             season: 1,
             episode: epNum
@@ -675,6 +690,11 @@ async function getMeta(type, id, hostUrl = '') {
         }
 
         videos.sort((a, b) => a.episode - b.episode);
+        const totalEps = videos.length;
+        videos.forEach(v => {
+          const daysAgo = Math.max(0, totalEps - v.episode);
+          v.released = new Date(Date.now() - (daysAgo * 86400000)).toISOString();
+        });
         meta.videos = videos;
       }
 
@@ -702,19 +722,28 @@ async function getMeta(type, id, hostUrl = '') {
       };
       if (meta.type === 'series') {
         if (initialData.seriesMeta && initialData.seriesMeta[cleanVid]) {
-          meta.videos = initialData.seriesMeta[cleanVid].map(ep => ({
-            id: `${id}:1:${ep.episode}:${ep.vid}`,
-            title: `الحلقة ${ep.episode}`,
-            season: 1,
-            episode: ep.episode
-          }));
+          const totalEps = initialData.seriesMeta[cleanVid].length;
+          meta.videos = initialData.seriesMeta[cleanVid].map(ep => {
+            const epNum = parseInt(ep.episode, 10) || 1;
+            const daysAgo = Math.max(0, totalEps - epNum);
+            return {
+              id: `${id}:1:${epNum}`,
+              vid: ep.vid,
+              title: `الحلقة ${epNum}`,
+              season: 1,
+              episode: epNum,
+              released: ep.released || new Date(Date.now() - (daysAgo * 86400000)).toISOString()
+            };
+          });
         } else {
           const epNum = extractEpisode(meta.name) || 1;
           meta.videos = [{
-            id: `${id}:1:${epNum}:${cleanVid}`,
+            id: `${id}:1:${epNum}`,
+            vid: cleanVid,
             title: `الحلقة ${epNum}`,
             season: 1,
-            episode: epNum
+            episode: epNum,
+            released: new Date().toISOString()
           }];
         }
       }
@@ -834,38 +863,73 @@ async function scrapeWatchServers(vid) {
 // ---------- High-Level getStreamsFor for Stremio ----------
 async function getStreamsFor(baseId, season, episode, hostUrl = '', userConfig = null) {
   let targetVid = null;
+  let servers = [];
+  let seriesId = '';
+  let epNum = 1;
 
   if (typeof baseId === 'string' && baseId.includes(':')) {
     const parts = baseId.split(':');
+    seriesId = parts[0];
+    epNum = parseInt(parts[2], 10) || 1;
+    const cleanBase = cleanId(seriesId);
+
     if (parts.length >= 4 && parts[3]) {
       targetVid = parts[3];
-    } else {
-      const epNum = parseInt(parts[2], 10) || 1;
-      const cleanBase = cleanId(parts[0]);
+    }
 
-      if (initialData.unifiedSeries && (initialData.unifiedSeries[cleanBase] || initialData.unifiedSeries[`km_s_${cleanBase}`])) {
-        const s = initialData.unifiedSeries[cleanBase] || initialData.unifiedSeries[`km_s_${cleanBase}`];
-        const ep = s.videos?.find(v => v.episode === epNum);
-        if (ep && ep.vid) targetVid = ep.vid;
-      }
+    if (initialData.unifiedSeries) {
+      const s = initialData.unifiedSeries[seriesId] ||
+                initialData.unifiedSeries[cleanBase] ||
+                initialData.unifiedSeries[`km_s_${cleanBase}`] ||
+                initialData.unifiedSeries[`ak_s_${cleanBase}`] ||
+                initialData.unifiedSeries[`wc_s_${cleanBase}`] ||
+                Object.values(initialData.unifiedSeries).find(x => x.id === seriesId || cleanId(x.id) === cleanBase);
 
-      if (!targetVid && initialData.seriesMeta && initialData.seriesMeta[cleanBase]) {
-        const ep = initialData.seriesMeta[cleanBase].find(v => v.episode === epNum);
-        if (ep && ep.vid) targetVid = ep.vid;
-      }
-
-      if (!targetVid) {
-        targetVid = cleanBase;
+      if (s && s.videos) {
+        const ep = s.videos.find(v => v.episode === epNum || (targetVid && v.vid === targetVid));
+        if (ep) {
+          if (!targetVid && ep.vid) targetVid = ep.vid;
+          if (ep.href) {
+            const sSource = s.source || (ep.href.includes('akwam') ? 'akwam' : 'wecima');
+            const label = sSource === 'akwam' ? 'سيرفر أكوام (MP4)' : 'سيرفر وي سيما (HD HLS)';
+            servers = [{ server: 1, label, embed: ep.href, source: sSource }];
+          }
+        }
       }
     }
+
+    if (!targetVid && initialData.seriesMeta && initialData.seriesMeta[cleanBase]) {
+      const ep = initialData.seriesMeta[cleanBase].find(v => v.episode === epNum);
+      if (ep && ep.vid) targetVid = ep.vid;
+    }
+
+    if (!targetVid) {
+      targetVid = cleanBase;
+    }
   } else if (season && episode) {
-    const epNum = parseInt(episode, 10);
+    seriesId = baseId;
+    epNum = parseInt(episode, 10) || 1;
     const cleanBase = cleanId(baseId);
 
-    if (initialData.unifiedSeries && (initialData.unifiedSeries[cleanBase] || initialData.unifiedSeries[`km_s_${cleanBase}`])) {
-      const s = initialData.unifiedSeries[cleanBase] || initialData.unifiedSeries[`km_s_${cleanBase}`];
-      const ep = s.videos?.find(v => v.episode === epNum);
-      if (ep && ep.vid) targetVid = ep.vid;
+    if (initialData.unifiedSeries) {
+      const s = initialData.unifiedSeries[seriesId] ||
+                initialData.unifiedSeries[cleanBase] ||
+                initialData.unifiedSeries[`km_s_${cleanBase}`] ||
+                initialData.unifiedSeries[`ak_s_${cleanBase}`] ||
+                initialData.unifiedSeries[`wc_s_${cleanBase}`] ||
+                Object.values(initialData.unifiedSeries).find(x => x.id === seriesId || cleanId(x.id) === cleanBase);
+
+      if (s && s.videos) {
+        const ep = s.videos.find(v => v.episode === epNum);
+        if (ep) {
+          if (!targetVid && ep.vid) targetVid = ep.vid;
+          if (ep.href) {
+            const sSource = s.source || (ep.href.includes('akwam') ? 'akwam' : 'wecima');
+            const label = sSource === 'akwam' ? 'سيرفر أكوام (MP4)' : 'سيرفر وي سيما (HD HLS)';
+            servers = [{ server: 1, label, embed: ep.href, source: sSource }];
+          }
+        }
+      }
     }
 
     if (!targetVid && initialData.seriesMeta && initialData.seriesMeta[cleanBase]) {
@@ -877,12 +941,16 @@ async function getStreamsFor(baseId, season, episode, hostUrl = '', userConfig =
       targetVid = cleanBase;
     }
   } else {
+    seriesId = baseId;
     targetVid = cleanId(baseId);
   }
 
-  if (!targetVid) return [];
-
-  let { servers } = await scrapeWatchServers(targetVid);
+  if ((!servers || servers.length === 0) && targetVid) {
+    const scraped = await scrapeWatchServers(targetVid);
+    if (scraped && scraped.servers && scraped.servers.length > 0) {
+      servers = scraped.servers;
+    }
+  }
 
   // Fallback for movies: check if baseId matches a movie directly in initialData.movies
   if ((!servers || servers.length === 0) && initialData.movies) {
@@ -900,7 +968,7 @@ async function getStreamsFor(baseId, season, episode, hostUrl = '', userConfig =
   if ((!servers || servers.length === 0) && initialData.unifiedSeries) {
     for (const [sKey, sObj] of Object.entries(initialData.unifiedSeries)) {
       if (sObj && sObj.videos) {
-        const ep = sObj.videos.find(v => v.id === baseId || v.vid === targetVid || cleanId(v.id) === targetVid);
+        const ep = sObj.videos.find(v => v.id === baseId || v.vid === targetVid || cleanId(v.id) === targetVid || (sObj.id === seriesId && v.episode === epNum));
         if (ep && (ep.href || sObj.href)) {
           const embedUrl = ep.href || sObj.href;
           if (sObj.source === 'akwam' || embedUrl.includes('akwam')) {
@@ -927,6 +995,8 @@ async function getStreamsFor(baseId, season, episode, hostUrl = '', userConfig =
     return { ...s, embed };
   });
 
+  const safeSeriesKey = (seriesId || cleanId(baseId) || 'series').replace(/[^a-zA-Z0-9_-]/g, '_');
+
   const streamPromises = cleanedServers.map(async (s) => {
     try {
       let resolved = [];
@@ -942,6 +1012,9 @@ async function getStreamsFor(baseId, season, episode, hostUrl = '', userConfig =
 
       if (resolved && resolved.length > 0) {
         const serverStreams = [];
+        const bingeGroupDirect = `${safeSeriesKey}-${sSource}-direct`;
+        const bingeGroupProxy = `${safeSeriesKey}-${sSource}-proxy`;
+
         for (const r of resolved) {
           let referer = r.referer || s.embed || 'https://kirmalk.com/';
           if (sSource === 'akwam') {
@@ -976,6 +1049,7 @@ async function getStreamsFor(baseId, season, episode, hostUrl = '', userConfig =
             url: r.url,
             behaviorHints: {
               notWebReady: false,
+              bingeGroup: bingeGroupDirect,
               proxyHeaders: {
                 request: {
                   'User-Agent': 'okhttp/4.9.3',
@@ -994,6 +1068,7 @@ async function getStreamsFor(baseId, season, episode, hostUrl = '', userConfig =
               url: `${hostUrl}${proxyPath}?url=${encodeURIComponent(r.url)}&referer=${encodeURIComponent(referer)}`,
               behaviorHints: {
                 notWebReady: false,
+                bingeGroup: bingeGroupProxy,
                 proxyHeaders: {
                   request: {
                     'User-Agent': 'okhttp/4.9.3',
