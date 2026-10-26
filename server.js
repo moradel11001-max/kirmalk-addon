@@ -3,6 +3,7 @@ const os = require('os');
 const https = require('https');
 const axios = require('axios');
 const { manifest, getManifest, ALL_CATALOGS, getCatalog, getMeta, getStreamsFor } = require('./scraper');
+const initialData = require('./initial_data.json');
 
 const agent = new https.Agent({ rejectUnauthorized: false });
 
