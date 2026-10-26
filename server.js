@@ -630,38 +630,12 @@ async function handleStreamRequest(req, res, userConfig, type, rawId) {
       };
     }
 
-    res.json({ streams: result, ...(req.query.debug ? { debug: { id, hostUrl, count: result.length } } : {}) });
+    res.json({ streams: result });
   } catch (e) {
     console.error('Stream route error:', e.message);
-    res.json({ streams: [], error: e.message, stack: e.stack });
+    res.json({ streams: [] });
   }
 }
-
-app.get('/debug-stream/:id', async (req, res) => {
-  try {
-    const testUrl = 'https://s1.hdup400.com/embed-g4a8jj8zgyad.html';
-    let fetchRes = null;
-    let fetchErr = null;
-    try {
-      const r = await axios.get(testUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-          'Referer': 'https://kirmalk.com/'
-        },
-        httpsAgent: agent,
-        timeout: 10000,
-        validateStatus: () => true
-      });
-      fetchRes = { status: r.status, headers: r.headers, snippet: (typeof r.data === 'string' ? r.data.slice(0, 600) : 'not-string') };
-    } catch (err) {
-      fetchErr = { message: err.message, code: err.code };
-    }
-
-    res.json({ fetchRes, fetchErr });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 app.get('/stream/:type/:id.json', (req, res) => {
   handleStreamRequest(req, res, null, req.params.type, req.params.id);
